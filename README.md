@@ -1,5 +1,13 @@
 # PortfolioV2
 
+## J’ai créé ce projet avec Angular, Bootstrap et Three.js. Les objets 3D ont été modélisés sous Blender, et l’apparence Bootstrap a été réalisée avec Bootstrap Studio. Copilot a été utilisé pour donner des conseils sur les étapes à suivre pour la création du projet. Le mode agent a également été utilisé pour aider à corriger les erreurs, notamment celles liées à Three.js.
+
+## Conseil : Ne pas utiliser le mode agent, peu importe l’IA choisie (Claude Sonnet, ChatGPT, etc.). Ces outils ont tendance à compliquer le projet, peinent à comprendre les questions même avec de la documentation, et génèrent autant de bugs qu’ils n’en corrigent.
+
+## J’ai déjà passé plusieurs heures à essayer de comprendre ce que l’IA avait modifié, juste pour pouvoir corriger ses erreurs. Au lieu d’une simple fonction get de 5 lignes avec deux entrées, elle m’a généré dix fonctions get différentes, une pour chaque lumière de la scène Three.js.
+
+
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.7.
 
 ## Development server
