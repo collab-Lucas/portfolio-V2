@@ -4,7 +4,14 @@
 
 ## Conseil : Ne pas utiliser le mode agent, peu importe l’IA choisie (Claude Sonnet, ChatGPT, etc.). Ces outils ont tendance à compliquer le projet, peinent à comprendre les questions même avec de la documentation, et génèrent autant de bugs qu’ils n’en corrigent.
 
-## J’ai déjà passé plusieurs heures à essayer de comprendre ce que l’IA avait modifié, juste pour pouvoir corriger ses erreurs. Au lieu d’une simple fonction get de 5 lignes avec deux entrées, elle m’a généré dix fonctions get différentes, une pour chaque lumière de la scène Three.js.
+## J’ai déjà passé plusieurs heures à essayer de comprendre ce que l’IA avait modifié, juste pour pouvoir corriger ses erreurs. 
+
+## Liste d’erreurs de l'ia : 
+- Au lieu d’une simple fonction get de 5 lignes avec deux entrées, elle m’a généré dix fonctions get différentes, une pour chaque lumière de la scène Three.js.
+- A eu du mal à comprendre que le site devait être autonome (standalone).
+- ...
+
+
 
 
 
