@@ -1,0 +1,31 @@
+<div class="color-picker-container">
+  <!-- Floating button to toggle color palette -->
+  <div class="selected-color-container">
+    <div 
+      class="selected-color" 
+      [style.background-color]="selectedColor"
+      (click)="togglePalette()">
+      <i class="fa fa-paint-brush" style="color: white;"></i>
+    </div>
+  </div>
+
+  <!-- Color palette dialog -->
+  <div class="color-palette" *ngIf="showPalette">
+    <div class="palette-container">
+      <div class="palette-header">
+        <h4>Select Theme Color</h4>
+        <button class="close-btn" (click)="togglePalette()">×</button>
+      </div>
+      <div class="color-options">
+        <div 
+          *ngFor="let color of colorOptions"
+          class="color-option"
+          [ngClass]="{'active': color.hex === selectedColor}"
+          [style.background-color]="color.hex"
+          (click)="selectColor(color.hex)">
+          <span class="color-name" [style.color]="getContrastColor(color.hex)">{{ color.name }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

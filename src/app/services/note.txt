@@ -1,0 +1,37 @@
+les fichiers principaux sont navbar.component.ts,three.service.ts,navbar-effect.service.ts  ...
+
+en clair ce que je veut pour la navbar  c'est pour 
+la scene 3d three js sert de fond
+
+initialise la scene 
+importe le fichier
+utiliser la camera du fichier importer
+
+note il y a 2 scene three js sur le site il faut faire les différence des lumières entre les deux il doit y avoir une liste pour la scene de navbar et une autre pour la scene du fond
+si il  n'y pas de lumière dans le fichiers importer en créer
+faire une liste et classe  des lumières avec le nom dependant de leur type (ex sun , spot ,1 ,ambient 1, ) intensiter, diifusioin et tout autres valeurs
+
+fait une fonction get set pour chaque lumière et valeur qui vont etre modifier qui marche en global pas par types de lumière ,ex : au lieu de setAmbientLightIntensity(intensity: number) {
+  this.updateLight('Ambient 1', { intensity });
+} ne peut tu pas faire setLightIntensity(light_name,intensity: number) { 
+  this.updateLight(light_name, { intensity });
+}
+
+la navbar est étendu et fait tout l'écran quand on arrive sur le site  il y plusieurs elements 
+une icones 
+Lucas Bonneau
+À propos
+Compétences
+Contact
+télecharger cv 
+
+quand on clique ou scroll sur la scene la navbar se réduit peut importe si l'on scroll beaucoup ou pas  cela envoie toujours sur le début du site
+
+lorsque l'on clique sur l'icone cela déplie la navbar et affiche directement les paramètres d'éclairage
+les paramètres d'éclairage s'affiche sur une bande a gauche de l'ecran il se réduit en meme temps que la navbar 
+dans les paramètre d'éclairage on va chercher la liste des lumière
+et pour chaque afficher le nom , avoir un élément de séléction de couleurs, un bouton pour allumer et eteindre la lumière en dessous un sliders pour modifier l'intensité et a cotée une zone de texte avec la valeurs de l'intensiter de la lumière 
+initialiser sur les valeurs de couleur, et d'intensité de lumière importer correspondantes
+toute modification va changer en temps réel les valeurs  de couleur, et d'intensité et donc les lumières
+
+

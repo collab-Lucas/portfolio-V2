@@ -1,1 +1,377 @@
 /* You can add global styles to this file, and also import other style files */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import './assets/css/aos.min.css';
+@import './assets/css/Dark-footer-with-social-media-icons.css';
+@import './assets/css/Navbar-Right-Links-Dark-icons.css';
+@import './assets/fonts/font-awesome.min.css';
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background-color: #121212;
+  color: #f8f9fa;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Three.js canvases */
+#three-navbar-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+#three-background-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* S'assurer que tout le contenu est au-dessus des canvas 3D */
+.navbar-brand,
+.navbar-nav,
+.nav-link,
+.navbar-toggler,
+.color-picker-wrapper,
+.btn {
+  position: relative;
+  z-index: 2;
+}
+
+/* Rendre les éléments de la navbar plus lisibles */
+.navbar-brand,
+.nav-link,
+.btn-outline-light {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Fond semi-transparent pour meilleure lisibilité */
+.navbar {
+  background: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* Empêcher les problèmes de stacking context */
+main {
+  position: relative;
+  z-index: 1;
+}
+
+/* Rendre transparent par défaut */
+body, html {
+  background-color: transparent;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Navbar */
+.navbar {
+  background-color: rgba(33, 37, 41, 0.8) !important;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.navbar.scrolled {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  background-color: rgba(25, 29, 33, 0.95) !important;
+}
+
+.navbar-brand {
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+/* Nouveau sélecteur de couleur */
+.palette-wrapper {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.palette-button {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-size: 18px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  color: white;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.palette-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.color-picker {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 15px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 200px;
+}
+
+.color-option {
+  width: 45px;
+  height: 45px;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-option:hover {
+  transform: scale(1.1) rotate(5deg);
+  border-color: rgba(255, 255, 255, 0.3);
+  z-index: 1;
+}
+
+.color-option.active {
+  border-color: white;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.color-option::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.color-option:hover::before {
+  opacity: 1;
+}
+
+.color-label {
+  font-size: 12px;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.3s ease;
+}
+
+.color-option:hover .color-label {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@keyframes colorPickerIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .color-picker {
+    grid-template-columns: repeat(4, 1fr);
+    min-width: 240px;
+  }
+  
+  .color-option {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .palette-button {
+    padding: 8px 16px;
+    font-size: 16px;
+  }
+}
+
+/* Palette de couleurs */
+.palette-wrapper {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.palette-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  padding: 10px;
+  font-size: 20px;
+  cursor: pointer;
+  backdrop-filter: blur(5px);
+  color: white;
+}
+
+.palette-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.color-wheel {
+  position: absolute;
+  top: 60px;
+  left: -20px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 15px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.color-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  transition: transform 0.2s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.2);
+}
+
+/* Sections et contenu */
+section {
+  position: relative;
+  z-index: 1;
+  min-height: 60vh;
+  padding: 4rem 0;
+  background-color: rgba(33, 37, 41, 0.7);
+}
+
+.intro-section {
+  padding-top: 120px;
+  min-height: 30vh;
+}
+
+#about {
+  background-color: rgba(33, 37, 41, 0.7);
+}
+
+#skills {
+  background-color: rgba(52, 58, 64, 0.85);
+}
+
+/* Carte de présentation */
+.card {
+  background-color: rgba(33, 37, 41, 0.8) !important;
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Badges de compétences */
+.badge {
+  padding: 8px 16px;
+  font-size: 1rem;
+  font-weight: normal;
+  transition: all 0.3s ease;
+}
+
+.badge:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Formulaire */
+.form-control {
+  background-color: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.form-control:focus {
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+/* Boutons */
+.btn {
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: #0d6efd;
+}
+
+.btn-primary:hover {
+  background-color: #0b5ed7;
+  transform: translateY(-2px);
+}
+
+/* Liens */
+footer a {
+  text-decoration: none;
+  transition: color 0.3s ease;
+  font-size: 1.2rem;
+}
+
+footer a:hover {
+  color: #0d6efd !important;
+}
+
+/* Zone 3D */
+#about-3d {
+  width: 300px;
+  height: 300px;
+}
+
+@media (max-width: 768px) {
+  #about-3d {
+    width: 200px;
+    height: 200px;
+  }
+
+  .intro-section {
+    padding-top: 80px;
+  }
+  
+  .palette-wrapper {
+    top: 10px;
+    left: 10px;
+  }
+}

@@ -1,0 +1,20 @@
+<!-- ...existing code... -->
+
+<div class="camera-controls-section">
+  <div class="orbit-control" 
+       (mousedown)="startOrbit($event)"
+       (mousemove)="updateOrbit($event)"
+       (mouseup)="stopOrbit()"
+       (mouseleave)="stopOrbit()">
+    <div class="orbit-handle"></div>
+  </div>
+  <div class="zoom-control">
+    <input type="range" 
+           [min]="1" 
+           [max]="10" 
+           [value]="5"
+           (input)="onZoomChange($event)">
+  </div>
+</div>
+
+<!-- ...existing code... -->

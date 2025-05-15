@@ -1,0 +1,90 @@
+.palette-wrapper {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+  }
+  
+  .palette-button {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    padding: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+    color: white;
+  }
+  
+  .color-wheel {
+    position: absolute;
+    top: 60px;
+    left: -20px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  }
+  
+  .color-swatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    transition: transform 0.2s;
+  }
+  
+  .color-swatch:hover {
+    transform: scale(1.2);
+  }
+
+
+  /* Pour que le canvas de la navbar reste en haut */
+.navbar-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  z-index: 0; /* En dessous du contenu */
+  pointer-events: none; /* Pour que la souris passe au travers */
+}
+
+/* Pour que le fond principal soit derrière tout le contenu */
+.background-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; /* Encore plus derrière */
+  pointer-events: none;
+}
+
+/* Pour ton contenu, assure-toi qu'il est au-dessus */
+main {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* Rendre tout transparent par défaut */
+body, html {
+  background-color: transparent;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Empêche Bootstrap ou d'autres styles d'appliquer un fond blanc */
+main, section, .container, .row, .col, nav, header, footer {
+  background-color: transparent !important;
+}
