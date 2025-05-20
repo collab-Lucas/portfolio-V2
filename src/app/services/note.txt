@@ -8,7 +8,7 @@ importe le fichier
 utiliser la camera du fichier importer
 
 note il y a 2 scene three js sur le site il faut faire les différence des lumières entre les deux il doit y avoir une liste pour la scene de navbar et une autre pour la scene du fond
-si il  n'y pas de lumière dans le fichiers importer en créer
+ne pas créer de lumières utiliser seulement celles importer dans le fichier
 faire une liste et classe  des lumières avec le nom dependant de leur type (ex sun , spot ,1 ,ambient 1, ) intensiter, diifusioin et tout autres valeurs
 
 fait une fonction get set pour chaque lumière et valeur qui vont etre modifier qui marche en global pas par types de lumière ,ex : au lieu de setAmbientLightIntensity(intensity: number) {
@@ -16,7 +16,7 @@ fait une fonction get set pour chaque lumière et valeur qui vont etre modifier 
 } ne peut tu pas faire setLightIntensity(light_name,intensity: number) { 
   this.updateLight(light_name, { intensity });
 }
-
+séparer en 3 composants navbar_ico et navbar_torus qui contiennent des animations , navbar_scene qui contient les camera lumières et scene de fond
 la navbar est étendu et fait tout l'écran quand on arrive sur le site  il y plusieurs elements 
 une icones 
 Lucas Bonneau

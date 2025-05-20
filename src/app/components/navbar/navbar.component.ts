@@ -1,6 +1,7 @@
 import { Component, ElementRef, OnInit, OnDestroy, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ThreeService } from '../../services/three.service';
+import { SimpleLight } from '../../services/three.service';
 import { ColorService } from '../../services/color.service';
 import { NavbarEffectsService } from '../../services/navbar-effects.service';
 import { Observable, Subscription } from 'rxjs';
@@ -10,42 +11,36 @@ import { trigger, transition, style, animate } from '@angular/animations';
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top px-3"
+  imports: [CommonModule, FormsModule],  template: `    <nav class="navbar navbar-expand-lg navbar-dark fixed-top px-3"
          [class.shrink-navbar]="isShrunk$ | async"
-         [class.large-navbar]="!(isShrunk$ | async)">
+         [class.large-navbar]="!(isShrunk$ | async)"
+         (click)="toggleNavbar($event)">
       <div class="canvas-container">
         <canvas #threeNavbarCanvas class="navbar-canvas"></canvas>
       </div>
 
       <!-- Panneau de contrôle des lumières -->
-      <div class="light-settings-panel" 
-           [class.show]="isLightControlsOpen"
-           (mouseenter)="keepNavbarOpen()">
+      <div class="light-settings-panel" [class.show]="isLightControlsOpen">
         <div class="panel-header">
-          <h6 class="text-white mb-0">Paramètres d'éclairage</h6>
-          <div class="tab-selector">
+          <h6 class="text-white mb-0">Paramètres d'éclairage</h6>          <div class="tab-selector">
             <button class="tab-button" 
                    [class.active]="activeTab === 'navbar'"
-                   (click)="activeTab = 'navbar'">
+                   (click)="setActiveTab('navbar')">
               Navbar
             </button>
             <button class="tab-button" 
                    [class.active]="activeTab === 'background'"
-                   (click)="activeTab = 'background'">
+                   (click)="setActiveTab('background')">
               Fond
             </button>
-          </div>
-          <button class="btn-close-panel" (click)="toggleLightControls()">
+          </div>          <button class="btn-close-panel" (click)="toggleLightControls($event)">
             <i class="fas fa-times"></i>
           </button>
         </div>
-        <div class="panel-content">
-          <div class="light-control" *ngFor="let light of filteredLights">
+        <div class="panel-content">          <div class="light-control" *ngFor="let light of filteredLights">
             <div class="light-header">
               <label class="text-white d-flex align-items-center">
-                <i [class]="getLightIcon(light.type)" class="me-2"></i>
+                <img [src]="getLightIcon(light.type)" class="light-icon me-2" alt="{{ light.name }}" />
                 {{ light.name }}
               </label>
               <div class="light-actions">
@@ -53,8 +48,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
                        class="form-control form-control-color btn-icon"
                        [value]="light.color"
                        (change)="onLightColorChange(light.name, $event)"
-                       [title]="'Couleur de ' + light.name">
-                <button class="btn-toggle" 
+                       [title]="'Couleur de ' + light.name"><button class="btn-toggle" 
                         [class.active]="light.enabled"
                         (click)="toggleLight(light.name)">
                   <i class="fas" [class.fa-eye]="light.enabled" [class.fa-eye-slash]="!light.enabled"></i>
@@ -82,11 +76,10 @@ import { trigger, transition, style, animate } from '@angular/animations';
       </div>
       
       <div class="navbar-brand-section">
-        <div class="d-flex align-items-center">
-          <button class="btn btn-icon me-2" 
-                  (click)="toggleLightControls()"
+        <div class="d-flex align-items-center">          <button class="btn btn-icon me-2" 
+                  (click)="toggleLightControls($event)"
                   title="Contrôles d'éclairage">
-            <i class="fas fa-lightbulb"></i>
+            <img src="assets/img/brands/logo site.png" alt="Paramètres" class="logo-settings" />
           </button>
           <span class="navbar-brand">Lucas Bonneau</span>
         </div>
@@ -109,17 +102,13 @@ import { trigger, transition, style, animate } from '@angular/animations';
         </ul>
       </div>
 
-      <!-- Indicateur de défilement/clic -->
-      <div class="scroll-indicator" 
-           [class.hidden]="isShrunk$ | async"
-           (click)="navbarEffects.resetForceState()">
+      <div class="scroll-indicator" [class.hidden]="isShrunk$ | async">
         <div class="scroll-text">Scroll</div>
         <div class="scroll-arrow"></div>
       </div>
     </nav>
   `,
-  styles: [`
-    .navbar {
+  styles: [`    .navbar {
       transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
       position: fixed;
       top: 0;
@@ -127,7 +116,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
       right: 0;
       z-index: 1030;
       overflow: visible;
-      cursor: pointer;
+      cursor: grab;
     }
 
     .large-navbar {
@@ -452,16 +441,24 @@ import { trigger, transition, style, animate } from '@angular/animations';
       height: 12px;
       border-radius: 50%;
       cursor: pointer;
+    }    /* Style pour le logo des paramètres */
+    .logo-settings {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      transition: transform 0.3s ease;
     }
 
-    /* Animation pour l'icône */
-    @keyframes glow {
-      0%, 100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.8); }
-      50% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }
+    .logo-settings:hover {
+      transform: rotate(30deg);
     }
-
-    .fa-lightbulb {
-      animation: glow 2s ease-in-out infinite;
+    
+    /* Style pour les icônes de lumière dans le panneau */
+    .light-icon {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+      filter: brightness(1.2);
     }
 
     /* Styles pour les contrôles de lumière */
@@ -997,16 +994,92 @@ import { trigger, transition, style, animate } from '@angular/animations';
       opacity: 1;
       color: #66ccff;
     }
+
+    .tab-selector {
+      display: flex;
+      gap: 5px;
+      margin: 0 15px;
+    }
+    
+    .tab-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 5px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 14px;
+    }
+    
+    .tab-button:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .tab-button.active {
+      background: rgba(102, 204, 255, 0.2);
+      border-color: #66ccff;
+      color: #66ccff;
+    }
+    .shadow-toggle {
+      margin-left: 5px;
+    }
+    
+    .shadow-toggle.active {
+      background: rgba(255, 223, 100, 0.3);
+      border-color: #ffdf64;
+      color: #ffdf64;
+    }
+    .shadow-toggle {
+      position: relative;
+    }
+    
+    .shadow-toggle.active {
+      background: rgba(92, 92, 92, 0.3);
+      border-color: #888;
+      color: #ddd;
+    }
+    
+    .shadow-toggle .fa-moon {
+      font-size: 0.9rem;
+    }
+    
+    .shadow-toggle:hover::after {
+      content: 'Ombres';
+      position: absolute;
+      bottom: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0.9;
+    }
   `]
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   @ViewChild('threeNavbarCanvas') navbarCanvas!: ElementRef<HTMLCanvasElement>;
-  
-  isLightControlsOpen = false;
+    isLightControlsOpen = false;
   currentColor$: Observable<string>;
-  lights: any[] = [];
+  lights: SimpleLight[] = []; // Utiliser SimpleLight au lieu de any[]
   private subscriptions: Subscription[] = [];
   
+  // Les anciennes propriétés sont conservées pour la rétrocompatibilité
+  // mais ne sont plus directement utilisées
+  ambientLightIntensity = 0.4; // Initialisation à 0.4 comme demandé
+  directionalLightIntensity = 0.05; // Initialisation à 0.05 comme demandé
+  pointLightIntensity = 0.3;
+  backgroundLightIntensity = 0.5;
+
+  ambientLightColor = '#ffffff';
+  directionalLightColor = '#ffffff';
+  pointLightColor = '#ffffff';
+  backgroundLightColor = '#ffffff';
+
   colorOptions: any[];
   cvAvailable = false;
   isShrunk$: Observable<boolean>;
@@ -1014,12 +1087,21 @@ export class NavbarComponent implements OnInit, OnDestroy {
   private mouseY = 0;
 
   showLightSettings: boolean = false;
-  activeTab: 'navbar' | 'background' = 'navbar';
+  activeTab: 'navbar' | 'background' = 'navbar';  // Définition des valeurs d'initialisation des lumières spécifiques
+  private initialLightValues = {
+    'Lumière ambiante': 0.4,
+    'Lumière directionnelle': 0.05,
+    'SpotBD': 0.5,
+    'SpotHD': 20.0,
+    'Spotprincipal': 100.0, 
+    'Spotrouge': 1000.0,
+    'Sun': 0.9
+  };
 
   constructor(
     private threeService: ThreeService,
     private colorService: ColorService,
-    public navbarEffects: NavbarEffectsService
+    private navbarEffects: NavbarEffectsService
   ) {
     this.currentColor$ = this.threeService.getCurrentColor();
     this.colorOptions = this.colorService.getColorOptions();
@@ -1052,6 +1134,56 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.threeService.initNavbar(this.navbarCanvas.nativeElement);
     // Appeler onResize une fois au démarrage pour gérer la largeur initiale
     this.threeService.onResize();
+    
+    // Charger la liste initiale des lumières
+    this.updateLightsList();
+    
+    // Initialiser les lumières avec les valeurs par défaut
+    this.initializeLights();
+      
+    // S'abonner aux changements de lumières
+    this.subscriptions.push(
+      this.threeService.getLights().subscribe((lights: SimpleLight[]) => {
+        this.lights = lights;
+      })
+    );
+  }
+  
+  /**
+   * Initialise les lumières avec les valeurs prédéfinies
+   */
+  private initializeLights(): void {
+    // Attendre un peu pour s'assurer que toutes les lumières sont chargées
+    setTimeout(() => {
+      // Pour chaque lumière dans notre liste d'initialisation
+      Object.entries(this.initialLightValues).forEach(([lightName, intensity]) => {
+        // Trouver la lumière correspondante
+        const light = this.lights.find(l => l.name === lightName);
+        if (light) {
+          // Définir l'intensité et s'assurer que la lumière est activée
+          this.threeService.setLightIntensity(lightName, intensity);
+          this.threeService.setLightVisibility(lightName, true);
+          
+          // Mettre à jour la valeur locale si c'est une des lumières principales
+          switch (lightName) {
+            case 'Lumière ambiante':
+              this.ambientLightIntensity = intensity;
+              break;
+            case 'Lumière directionnelle':
+              this.directionalLightIntensity = intensity;
+              break;
+            case 'Lumière ponctuelle':
+              this.pointLightIntensity = intensity;
+              break;
+            case 'Lumière de fond':
+              this.backgroundLightIntensity = intensity;
+              break;
+          }
+        }
+      });
+      
+      console.log('Lumières initialisées avec les valeurs par défaut');
+    }, 500); // Délai pour s'assurer que toutes les lumières sont chargées
   }
 
   ngOnDestroy() {
@@ -1081,79 +1213,256 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }
   }
 
+  onAmbientLightChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.ambientLightIntensity = parseFloat(input.value);
+    this.threeService.setAmbientLightIntensity(this.ambientLightIntensity);
+  }
 
-  toggleLightControls() {
+  onDirectionalLightChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.directionalLightIntensity = parseFloat(input.value);
+    this.threeService.setDirectionalLightIntensity(this.directionalLightIntensity);
+  }
+
+  onPointLightChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.pointLightIntensity = parseFloat(input.value);
+    this.threeService.setPointLightIntensity(this.pointLightIntensity);
+  }
+
+  onBackgroundLightChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.backgroundLightIntensity = parseFloat(input.value);
+    this.threeService.setBackgroundLightIntensity(this.backgroundLightIntensity);
+  }
+
+  // Méthodes pour les inputs numériques
+  onAmbientLightIntensityInputChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.ambientLightIntensity = parseFloat(input.value);
+    this.threeService.setAmbientLightIntensity(this.ambientLightIntensity);
+  }
+
+  onDirectionalLightIntensityInputChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.directionalLightIntensity = parseFloat(input.value);
+    this.threeService.setDirectionalLightIntensity(this.directionalLightIntensity);
+  }
+
+  onPointLightIntensityInputChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.pointLightIntensity = parseFloat(input.value);
+    this.threeService.setPointLightIntensity(this.pointLightIntensity);
+  }
+
+  onBackgroundLightIntensityInputChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.backgroundLightIntensity = parseFloat(input.value);
+    this.threeService.setBackgroundLightIntensity(this.backgroundLightIntensity);
+  }
+
+  // Méthodes pour les changements de couleur
+  onAmbientLightColorChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.ambientLightColor = input.value;
+    this.threeService.setAmbientLightColor(this.ambientLightColor);
+  }
+
+  onDirectionalLightColorChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.directionalLightColor = input.value;
+    this.threeService.setDirectionalLightColor(this.directionalLightColor);
+  }
+
+  onPointLightColorChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.pointLightColor = input.value;
+    this.threeService.setPointLightColor(this.pointLightColor);
+  }
+
+  onBackgroundLightColorChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.backgroundLightColor = input.value;
+    this.threeService.setBackgroundLightColor(this.backgroundLightColor);
+  }  toggleLightControls(event: Event) {
+    // Prevent event bubbling to avoid triggering navbar toggle
+    event.stopPropagation();
+    
     this.isLightControlsOpen = !this.isLightControlsOpen;
     if (this.isLightControlsOpen) {
       this.updateLightsList();
-      this.navbarEffects.forceFullscreen(true);
+      this.navbarEffects.setNavbarState(false);  // Expand navbar
     } else {
-      this.navbarEffects.forceFullscreen(false);
+      this.navbarEffects.setNavbarState(true);   // Shrink navbar
     }
   }
-
   updateLightsList() {
     this.lights = this.threeService.getAllLights();
+    
+    // Mettre à jour les propriétés pour la rétrocompatibilité
+    const ambientLight = this.lights.find(l => l.name === 'Lumière ambiante');
+    if (ambientLight) {
+      this.ambientLightIntensity = ambientLight.intensity;
+      this.ambientLightColor = ambientLight.color;
+    }
+    
+    const directionalLight = this.lights.find(l => l.name === 'Lumière directionnelle');
+    if (directionalLight) {
+      this.directionalLightIntensity = directionalLight.intensity;
+      this.directionalLightColor = directionalLight.color;
+    }
+    
+    const pointLight = this.lights.find(l => l.name === 'Lumière ponctuelle');
+    if (pointLight) {
+      this.pointLightIntensity = pointLight.intensity;
+      this.pointLightColor = pointLight.color;
+    }
+    
+    const backgroundLight = this.lights.find(l => l.name === 'Lumière de fond');
+    if (backgroundLight) {
+      this.backgroundLightIntensity = backgroundLight.intensity;
+      this.backgroundLightColor = backgroundLight.color;
+    }
   }
-
+  
+  /**
+   * Récupération des lumières filtrées par la scène active
+   * Cette propriété getter retourne les lumières correspondant à l'onglet actif
+   */
   get filteredLights() {
-    return this.lights.filter(light => 
-      (this.activeTab === 'navbar' && light.type !== 'BackgroundLight') ||
-      (this.activeTab === 'background' && light.type === 'BackgroundLight')
-    );
+    return this.threeService.getLightsByScene(this.activeTab);
   }
-
-  getLightIcon(type: string) {
-    return type === 'AmbientLight' ? 'fas fa-sun' : 'fas fa-lightbulb';
+  
+  /**
+   * Change d'onglet et actualise les lumières
+   * @param tab Onglet à activer ('navbar' ou 'background')
+   */
+  setActiveTab(tab: 'navbar' | 'background') {
+    this.activeTab = tab;
+    this.threeService.setActiveTab(tab);
   }
-
+  
+  /**
+   * Modifie l'intensité d'une lumière
+   * @param lightName Nom de la lumière
+   * @param event Événement d'input
+   */
   onLightIntensityChange(lightName: string, event: Event) {
     const input = event.target as HTMLInputElement;
     const intensity = parseFloat(input.value);
-    const light = this.lights.find(l => l.name === lightName);
-    if (light) {
-      light.intensity = intensity;
-      // Utiliser la méthode générique plutôt que les méthodes spécifiques
-      this.threeService.setLightIntensity(lightName, intensity);
+    
+    // Utiliser la méthode du service pour modifier l'intensité
+    this.threeService.setLightIntensity(lightName, intensity);
+    
+    // Mise à jour des propriétés de rétrocompatibilité
+    switch (lightName) {
+      case 'Lumière ambiante':
+        this.ambientLightIntensity = intensity;
+        break;
+      case 'Lumière directionnelle':
+        this.directionalLightIntensity = intensity;
+        break;
+      case 'Lumière ponctuelle':
+        this.pointLightIntensity = intensity;
+        break;
+      case 'Lumière de fond':
+        this.backgroundLightIntensity = intensity;
+        break;
     }
   }
-
+  
+  /**
+   * Modifie la couleur d'une lumière
+   * @param lightName Nom de la lumière
+   * @param event Événement de changement de couleur
+   */
   onLightColorChange(lightName: string, event: Event) {
     const input = event.target as HTMLInputElement;
     const color = input.value;
-    const light = this.lights.find(l => l.name === lightName);
-    if (light) {
-      light.color = color;
-      // Utiliser la méthode générique plutôt que les méthodes spécifiques
-      this.threeService.setLightColor(lightName, color);
+    
+    // Utiliser la méthode du service pour modifier la couleur
+    this.threeService.setLightColor(lightName, color);
+    
+    // Mise à jour des propriétés de rétrocompatibilité
+    switch (lightName) {
+      case 'Lumière ambiante':
+        this.ambientLightColor = color;
+        break;
+      case 'Lumière directionnelle':
+        this.directionalLightColor = color;
+        break;
+      case 'Lumière ponctuelle':
+        this.pointLightColor = color;
+        break;
+      case 'Lumière de fond':
+        this.backgroundLightColor = color;
+        break;
     }
   }
-
+  
+  /**
+   * Active ou désactive une lumière
+   * @param lightName Nom de la lumière
+   */
   toggleLight(lightName: string) {
     const light = this.lights.find(l => l.name === lightName);
     if (light) {
-      light.enabled = !light.enabled;
-      this.threeService.setLightVisibility(lightName, light.enabled);
+      // Inverser l'état actuel
+      const newState = !light.enabled;
+      
+      // Utiliser la méthode du service pour modifier la visibilité
+      this.threeService.setLightVisibility(lightName, newState);
+      
+      // Mettre à jour l'état local
+      light.enabled = newState;
     }
   }
-
-  // Méthode pour garder la navbar ouverte lors du survol du panneau de contrôle
-  keepNavbarOpen() {
-    this.navbarEffects.forceFullscreen(true);
-  }
-
-  toggleLightSettings() {
-    this.showLightSettings = !this.showLightSettings;
-  }
-
-  @HostListener('document:click', ['$event'])
+  // Méthode pour obtenir l'icône ou l'image en fonction du type de lumière
+  getLightIcon(type: string): string {
+    switch (type) {
+      case 'AmbientLight':
+        return 'assets/img/brands/logo ambient.png'; // Image pour lumière ambiante
+      case 'DirectionalLight':
+        return 'assets/img/brands/logo direct.png';  // Image pour lumière directionnelle
+      case 'PointLight':
+        return 'assets/img/brands/logo site2.png';   // Image pour lumière ponctuelle
+      case 'SpotLight':
+        return 'assets/img/brands/logo spotlight-clear.png'; // Image pour spotlight
+      case 'HemisphereLight':
+        return 'assets/img/brands/logo sun.png';     // Image pour hemisphère
+      case 'RectAreaLight':
+        return 'assets/img/brands/logo site.png';    // Image générique pour autres lumières
+      default:
+        return 'assets/img/brands/logo site.png';    // Image par défaut
+    }
+  }  @HostListener('document:click', ['$event'])
   handleClickOutside(event: Event) {
     const target = event.target as HTMLElement;
     const panel = document.querySelector('.light-settings-panel');
-    const toggleButton = document.querySelector('.light-settings-toggle');
+    const toggleButton = document.querySelector('.btn-icon img.logo-settings');
 
-    if (panel && !panel.contains(target) && toggleButton && !toggleButton.contains(target)) {
-      this.showLightSettings = false;
+    // Only close panel if clicking outside panel and not on the toggle button
+    if (panel && !panel.contains(target) && 
+        toggleButton && !toggleButton.contains(target) && 
+        !target.closest('.btn-icon')) {
+      this.isLightControlsOpen = false;
+      // Don't auto-shrink navbar when closing panel by clicking elsewhere
     }
+  }
+  /**
+   * Toggle navbar between expanded and shrunk states
+   */
+  toggleNavbar(event: Event): void {
+    // Don't toggle if click is on settings button or light panel
+    if (event.target instanceof Element) {
+      const target = event.target as Element;
+      if (target.closest('.light-settings-panel') || 
+          target.closest('.btn-icon') || 
+          target.closest('.navbar-brand-section')) {
+        return;
+      }
+    }
+    this.navbarEffects.toggleNavbar();
   }
 }

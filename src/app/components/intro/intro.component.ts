@@ -14,6 +14,7 @@ import { CommonModule } from '@angular/common';
   styles: [`
     .intro-section {
       padding-top: 120px;
+      margin_top: 120px;
     }
   `]
 })

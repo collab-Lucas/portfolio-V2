@@ -1,0 +1,78 @@
+// Voici les modifications à apporter au fichier three.service.ts pour que navbar_scene projette des ombres:
+
+1. Modifier cette ligne (autour de la ligne 580):
+```typescript
+// Les objets de la scène principale doivent recevoir des ombres mais ne pas forcément en projeter
+this.configureShadowsForObject(child, false, true);
+```
+
+en:
+```typescript
+// Configurer les objets de la scène principale pour projeter ET recevoir des ombres
+this.configureShadowsForObject(child, true, true);
+```
+
+2. S'assurer que la fonction optimizeLightsForTorusShadows() est complète et contient cette ligne:
+```typescript
+// Optimiser les lumières pour mieux faire apparaître les ombres du torus et du navbar_scene
+optimizeLightsForTorusShadows(): void {
+    if (!this.navbarScene || !this.directionalLight) return;
+    
+    // Ajuster la position et l'intensité de la lumière directionnelle principale
+    this.directionalLight.position.set(-8, 12, 8);
+    this.directionalLight.intensity = 0.9;
+    
+    // Trouver la lumière directionnelle secondaire
+    const secondaryLight = this.navbarScene.getObjectByName('Lumière directionnelle secondaire') as THREE.DirectionalLight;
+    if (secondaryLight) {
+      // Ajuster la position pour créer une ombre plus visible
+      secondaryLight.position.set(10, 6, -7);
+      secondaryLight.intensity = 0.5;
+    }
+    
+    // Parcourir tous les objets de la scène pour s'assurer qu'ils sont configurés pour les ombres
+    this.navbarScene.traverse(obj => {
+      if (obj instanceof THREE.Mesh) {
+        // Activer les ombres pour tous les objets
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        
+        // Appliquer une configuration spéciale au torus
+        if (obj.name.includes('torus') || (obj.parent && obj.parent.name && obj.parent.name.includes('torus'))) {
+          console.log('Torus trouvé, optimisation des ombres...');
+          
+          // S'assurer que le torus est bien positionné pour projeter des ombres
+          if (obj.position.y < 0.5) {
+            obj.position.y += 0.5; // Léger décalage vers le haut pour mieux projeter l'ombre
+          }
+          
+          // Appliquer la configuration spéciale au torus
+          this.configureTorus(obj);
+        }
+      }
+    });
+    
+    // Forcer une mise à jour immédiate des ombres
+    this.forceUpdateShadows();
+    
+    console.log('Lumières optimisées pour les ombres');
+}
+
+3. S'assurer que le forceUpdateShadows est appelé périodiquement:
+Dans la fonction animate(), après cette ligne:
+```typescript
+if (currentTime - this.lastShadowUpdate > shadowUpdateInterval) {
+    this.forceUpdateShadows();
+    
+    // Chercher et optimiser spécifiquement le torus si nécessaire
+    if (!this.torusShadowsOptimized && currentTime > 5000) {
+        // Attendre 5 secondes après le chargement pour optimiser les ombres du torus
+        this.optimizeLightsForTorusShadows();
+        this.torusShadowsOptimized = true;
+    }
+    
+    this.lastShadowUpdate = currentTime;
+}
+```
+
+4. Ajouter un bouton ou une fonction pour appeler directement optimizeLightsForTorusShadows() si nécessaire.
