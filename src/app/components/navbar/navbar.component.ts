@@ -87,15 +87,25 @@ import { trigger, transition, style, animate } from '@angular/animations';
 
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
         <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="navMenu">
-        <ul class="navbar-nav ms-auto align-items-center">
-          <li class="nav-item"><a class="nav-link" href="#about">À propos</a></li>
-          <li class="nav-item"><a class="nav-link" href="#skills">Compétences</a></li>
-          <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
-          <li class="nav-item ms-2">
-            <button class="btn btn-outline-light" (click)="downloadCV()">
+      </button>      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav ms-auto align-items-center">          <li class="nav-item me-3">
+            <a class="nav-link" 
+               href="#about" 
+               (click)="onNavLinkClick($event, 'about')">À propos</a>
+          </li>
+          <li class="nav-item me-3">
+            <a class="nav-link" 
+               href="#skills" 
+               (click)="onNavLinkClick($event, 'skills')">Compétences</a>
+          </li>
+          <li class="nav-item me-3">
+            <a class="nav-link" 
+               href="#contact" 
+               (click)="onNavLinkClick($event, 'contact')">Contact</a>
+          </li>
+          <li class="nav-item ms-4">
+            <button class="btn btn-outline-light" 
+                    (click)="downloadCV($event)">
               Télécharger CV
             </button>
           </li>
@@ -278,49 +288,94 @@ import { trigger, transition, style, animate } from '@angular/animations';
     .navbar .navbar-toggler {
       position: relative;
       z-index: 2;
-    }
-
+    }    /* Améliorations pour le mode navbar large avec espacement et texte plus blanc */
     .large-navbar .nav-link,
     .large-navbar .navbar-brand,
     .large-navbar .btn {
       font-size: 1.2rem;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       transition: all 0.3s ease;
+      color: rgba(255, 255, 255, 0.95) !important;
+    }
+
+    .large-navbar .nav-link {
+      margin: -0.25rem 0.75rem; /* Plus d'espacement en mode large */
+      font-weight: 500;
     }
 
     .large-navbar .nav-link:hover,
     .large-navbar .navbar-brand:hover {
       text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
       transform: translateY(-2px);
-    }
-
-    /* Amélioration du bouton CV */
+      color: rgba(255, 255, 255, 1) !important;
+    }/* Amélioration du bouton CV - Zone de hover agrandie et contour retiré + Texte plus blanc */
     .btn-outline-light {
       position: relative;
       overflow: hidden;
       transition: all 0.3s ease;
+      padding: 0.75rem 1.5rem;
+      margin: -0.25rem; /* Agrandit la zone de hover */
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      color: rgba(255, 255, 255, 0.95) !important;
+      font-weight: 500;
+    }
+
+    /* Retirer tous les contours au focus/active */
+    .btn-outline-light:focus,
+    .btn-outline-light:active,
+    .btn-outline-light:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
+      border-color: rgba(255, 255, 255, 0.9);
+      color: rgba(255, 255, 255, 0.95) !important;
     }
 
     .btn-outline-light:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      background-color: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 1);
+      color: rgba(255, 255, 255, 1) !important;
     }
 
     .large-navbar .btn-outline-light {
-      padding: 0.8rem 1.5rem;
+      padding: 0.9rem 1.8rem;
       border-width: 2px;
-    }
-
-    /* Effet de survol sur les liens de navigation */
+      margin: -0.3rem; /* Zone de hover encore plus grande en mode large */
+      font-size: 1.1rem;
+    }    /* Effet de survol sur les liens de navigation - Option 1: Soulignage + Fond subtil au hover + Zone agrandie + Texte plus blanc */
     .nav-link {
       position: relative;
-      padding: 0.5rem 1rem;
+      padding: 0.75rem 1.25rem;
+      margin: -0.25rem 0.5rem; /* Agrandit la zone de hover et ajoute espacement horizontal */
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      color: rgba(255, 255, 255, 0.9) !important;
+      font-weight: 500;
     }
 
+    /* Retirer le contour au focus pour les liens */
+    .nav-link:focus,
+    .nav-link:active,
+    .nav-link:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    /* Fond subtil au hover uniquement avec zone agrandie + texte plus blanc */
+    .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.12);
+      transform: translateY(-1px);
+      color: rgba(255, 255, 255, 1) !important;
+    }
+
+    /* Effet de soulignage (conservé de l'original) */
     .nav-link::after {
       content: '';
       position: absolute;
-      bottom: 0;
+      bottom: 0.25rem;
       left: 50%;
       width: 0;
       height: 2px;
@@ -330,7 +385,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
     }
 
     .nav-link:hover::after {
-      width: 100%;
+      width: calc(100% - 0.5rem);
     }
 
     .light-controls {
@@ -1043,8 +1098,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
     .shadow-toggle .fa-moon {
       font-size: 0.9rem;
     }
-    
-    .shadow-toggle:hover::after {
+      .shadow-toggle:hover::after {
       content: 'Ombres';
       position: absolute;
       bottom: -25px;
@@ -1058,6 +1112,146 @@ import { trigger, transition, style, animate } from '@angular/animations';
       white-space: nowrap;
       pointer-events: none;
       opacity: 0.9;
+    }
+
+    /* ===== STYLES OPTIMISÉS POUR LA NAVIGATION ===== */
+    
+    /* Fond pour les liens de navigation */
+    .nav-link-with-bg {
+      position: relative;
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem !important;
+      margin: 0 0.25rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+    
+    .nav-link-with-bg::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      border-radius: 8px;
+    }
+    
+    .nav-link-with-bg:hover::before {
+      opacity: 1;
+    }
+    
+    .nav-link-with-bg:hover {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .nav-link-with-bg:active {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(0);
+    }
+    
+    /* Animation de clic pour feedback */
+    .nav-link-with-bg::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transition: width 0.6s, height 0.6s;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    
+    .nav-link-with-bg:active::after {
+      width: 200px;
+      height: 200px;
+    }
+    
+    /* Curseur optimisé pour les différentes zones */
+    .navbar {
+      cursor: pointer;
+    }
+    
+    .navbar .nav-link-with-bg,
+    .navbar .btn-outline-light,
+    .navbar .btn-icon,
+    .navbar .navbar-brand-section {
+      cursor: pointer;
+    }
+    
+    .shrink-navbar {
+      cursor: default;
+    }
+    
+    /* Amélioration du bouton CV avec protection contre toggle */
+    .btn-outline-light {
+      position: relative;
+      z-index: 10;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-width: 2px;
+      padding: 0.75rem 1.5rem;
+      font-weight: 500;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+    
+    .btn-outline-light:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.8);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .btn-outline-light:active {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Zone interactive clarifiée */
+    .navbar-nav {
+      position: relative;
+      z-index: 5;
+    }
+    
+    .navbar-brand-section {
+      position: relative;
+      z-index: 5;
+    }
+    
+    /* Responsive amélioré */
+    @media (max-width: 991.98px) {
+      .nav-link-with-bg {
+        margin: 0.25rem 0;
+        padding: 0.75rem 1rem !important;
+      }
+      
+      .btn-outline-light {
+        margin-top: 0.5rem;
+        width: 100%;
+      }
+    }
+    
+    /* Performance optimizations */
+    .navbar,
+    .nav-link-with-bg,
+    .btn-outline-light {
+      will-change: transform;
+    }
+    
+    /* Improved focus states for accessibility */
+    .nav-link-with-bg:focus,
+    .btn-outline-light:focus {
+      outline: 2px solid rgba(255, 255, 255, 0.5);
+      outline-offset: 2px;
     }
   `]
 })
@@ -1080,14 +1274,14 @@ export class NavbarComponent implements OnInit, OnDestroy {
   pointLightColor = '#ffffff';
   backgroundLightColor = '#ffffff';
 
-  colorOptions: any[];
-  cvAvailable = false;
+  colorOptions: any[];  cvAvailable = false;
   isShrunk$: Observable<boolean>;
   private mouseX = 0;
   private mouseY = 0;
+  private currentShrinkState = true; // Cache pour l'état actuel
 
   showLightSettings: boolean = false;
-  activeTab: 'navbar' | 'background' = 'navbar';  // Définition des valeurs d'initialisation des lumières spécifiques
+  activeTab: 'navbar' | 'background' = 'navbar';// Définition des valeurs d'initialisation des lumières spécifiques
   private initialLightValues = {
     'Lumière ambiante': 0.4,
     'Lumière directionnelle': 0.05,
@@ -1118,11 +1312,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Ajouter l'écouteur de mouvement de la souris
-    window.addEventListener('mousemove', this.handleMouseMove.bind(this));
-
-    // S'abonner aux changements d'état de la navbar
+    window.addEventListener('mousemove', this.handleMouseMove.bind(this));    // S'abonner aux changements d'état de la navbar
     this.subscriptions.push(
       this.navbarEffects.isShrunk$.subscribe(isShrunk => {
+        this.currentShrinkState = isShrunk; // Mettre à jour le cache
         if (isShrunk && this.isLightControlsOpen) {
           this.isLightControlsOpen = false;
         }
@@ -1205,11 +1398,48 @@ export class NavbarComponent implements OnInit, OnDestroy {
   changeColor(event: Event) {
     const input = event.target as HTMLInputElement;
     this.threeService.setCurrentColor(input.value);
+  }  /**
+   * Gère le clic sur les liens de navigation (version optimisée)
+   */
+  onNavLinkClick(event: Event, targetId: string) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Utiliser le cache au lieu d'une subscription
+    const wasExpanded = !this.currentShrinkState;
+    
+    // Si la navbar est grande, la réduire
+    if (wasExpanded) {
+      this.navbarEffects.setNavbarState(true);
+    }
+    
+    // Navigation vers la section avec un délai optimisé
+    const delay = wasExpanded ? 300 : 0;
+    setTimeout(() => {
+      this.navigateToSection(targetId);
+    }, delay);
   }
 
-  downloadCV() {
+  /**
+   * Navigation vers une section spécifique
+   */
+  private navigateToSection(targetId: string) {
+    const element = document.getElementById(targetId);
+    if (element) {
+      element.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  }
+  downloadCV(event?: Event) {
+    // Empêcher la propagation pour éviter l'agrandissement de la navbar
+    if (event) {
+      event.stopPropagation();
+    }
+    
     if (this.cvAvailable) {
-      window.open('assets/cv.pdf', '_blank');
+      window.open('assets/CV_Bonneau_Lucas.pdf', '_blank');
     }
   }
 
@@ -1449,20 +1679,33 @@ export class NavbarComponent implements OnInit, OnDestroy {
       this.isLightControlsOpen = false;
       // Don't auto-shrink navbar when closing panel by clicking elsewhere
     }
-  }
-  /**
-   * Toggle navbar between expanded and shrunk states
+  }  /**
+   * Toggle navbar between expanded and shrunk states avec gestion optimisée des clics
    */
   toggleNavbar(event: Event): void {
-    // Don't toggle if click is on settings button or light panel
-    if (event.target instanceof Element) {
-      const target = event.target as Element;
-      if (target.closest('.light-settings-panel') || 
-          target.closest('.btn-icon') || 
-          target.closest('.navbar-brand-section')) {
-        return;
-      }
+    const target = event.target as HTMLElement;
+    
+    // Tableau des sélecteurs qui empêchent le toggle
+    const preventToggleSelectors = [
+      '.light-settings-panel',
+      '.btn-icon',
+      '.navbar-brand-section',
+      '.nav-link',
+      '.btn-outline-light',
+      '.navbar-nav',
+      '.navbar-toggler'
+    ];
+    
+    // Vérifier si le clic est sur un élément qui doit empêcher le toggle
+    const shouldPreventToggle = preventToggleSelectors.some(selector => 
+      target.closest(selector)
+    );
+    
+    if (shouldPreventToggle) {
+      return;
     }
+    
+    // Faire le toggle seulement si aucun élément bloquant n'est cliqué
     this.navbarEffects.toggleNavbar();
   }
 }

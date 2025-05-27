@@ -1,3 +1,4 @@
+<!-- New navbar component template -->
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top px-3"
      [class.shrink-navbar]="isShrunk$ | async"
      [class.large-navbar]="!(isShrunk$ | async)"

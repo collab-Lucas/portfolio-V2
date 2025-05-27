@@ -47,16 +47,8 @@
   }
 
 
-  /* Pour que le canvas de la navbar reste en haut */
-.navbar-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100px;
-  z-index: 0; /* En dessous du contenu */
-  pointer-events: none; /* Pour que la souris passe au travers */
-}
+  /* Removing conflicting navbar-canvas styles that were moved to the navbar component */
+/* This comment preserves the section for documentation purposes */
 
 /* Pour que le fond principal soit derrière tout le contenu */
 .background-canvas {

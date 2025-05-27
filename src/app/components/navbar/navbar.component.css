@@ -49,6 +49,66 @@
 .navbar {
   transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   position: fixed;
+}
+
+/* Styles des éléments de navigation */
+.nav-item-container {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-item-container:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.custom-nav-link {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  margin: -0.25rem 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.custom-nav-link:hover {
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+.large-navbar .custom-nav-link {
+  color: rgba(255, 255, 255, 0.95) !important;
+  margin: -0.25rem 0.75rem;
+  font-weight: 500;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.large-navbar .nav-item-container:hover {
+  transform: translateY(-2px);
+}
+
+/* Style du bouton CV */
+.btn-outline-light {
+  color: rgba(255, 255, 255, 0.95) !important;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+  color: rgba(255, 255, 255, 1) !important;
+  border: 2px solid rgba(255, 255, 255, 1);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.large-navbar .btn-outline-light {
+  font-size: 1.1rem;
+}
+
+/* Navbar positioning */
+.navbar {
   top: 0;
   left: 0;
   right: 0;
@@ -91,8 +151,12 @@
   left: 0;
   width: 100%;
   height: 100vh;
+  display: block; 
   transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
+  z-index: 1; /* Augmenté pour s'assurer qu'il est visible */
+  opacity: 1;
+  will-change: transform; /* Optimisation pour les performances */
 }
 
 .shrink-navbar .navbar-canvas {
@@ -146,6 +210,23 @@
   transition: opacity 0.3s ease;
 }
 
+/* Navbar toggle button */
+.navbar-toggler {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 0.25rem 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.navbar-toggler:hover, .navbar-toggler:focus {
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 0.1rem rgba(255, 255, 255, 0.25);
+  outline: none;
+}
+
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.95%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
 /* Responsive */
 @media (max-width: 991.98px) {
   .large-navbar .navbar-collapse {
@@ -158,6 +239,27 @@
     border-radius: 8px;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+  }
+
+  .nav-item {
+    margin-bottom: 0.5rem;
+  }
+
+  .light-settings-panel {
+    width: 90%;
+    max-width: 320px;
+    right: 5%;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .navbar-brand {
+    font-size: 1.1rem;
+  }
+  
+  .logo-settings {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -249,12 +351,20 @@
   border-width: 2px;
 }
 
-/* Effet de survol sur les liens de navigation */
+/* Effet de survol sur les liens de navigation - Option 1: Soulignage + Fond subtil au hover */
 .nav-link {
   position: relative;
   padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
 }
 
+/* Fond subtil au hover uniquement */
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Effet de soulignage (conservé de l'original) */
 .nav-link::after {
   content: '';
   position: absolute;
@@ -276,17 +386,18 @@
   position: fixed;
   top: 70px;
   right: 20px;
-  width: 300px;
-  background: rgba(0, 0, 0, 0.85);
-  border-radius: 8px;
+  width: 280px;
+  background: rgba(10, 10, 15, 0.95);
+  border-radius: 12px;
   padding: 1rem;
   color: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
   transform: translateX(350px);
-  transition: transform 0.3s ease-out;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   z-index: 1050;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .light-settings-panel.show {
@@ -308,107 +419,193 @@
   color: white;
   font-size: 1rem;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
+  padding: 0.25rem;
+  transition: all 0.2s ease;
 }
 
 .btn-close-panel:hover {
-  opacity: 1;
+  color: rgba(255, 0, 0, 0.7);
 }
 
 .panel-content {
-  max-height: 70vh;
+  max-height: 60vh;
   overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) rgba(0,0,0,0.2);
+}
+
+.panel-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255,255,255,0.3);
+  border-radius: 4px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background-color: rgba(0,0,0,0.2);
 }
 
 .light-control {
-  margin-bottom: 1.5rem;
-  padding: 0.8rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.625rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .light-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
 }
 
 .light-actions {
   display: flex;
+  gap: 0.5rem;
   align-items: center;
-  gap: 10px;
 }
 
 .form-control-color {
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  border: none;
-  background: none;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  margin: 0;
 }
 
 .btn-toggle {
   background: none;
-  border: none;
   color: white;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-  width: 30px;
-  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+  font-size: 0.7rem;
+}
+
+.btn-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .btn-toggle.active {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.1);
+  background-color: rgba(66, 133, 244, 0.3);
+  border-color: rgba(66, 133, 244, 0.5);
 }
 
 .light-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.75rem;
 }
 
 .light-slider {
   flex-grow: 1;
   height: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
 }
 
 .intensity-input {
   width: 60px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  text-align: center;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
 }
 
-/* Animation pour l'icône */
-@keyframes glow {
-  0%, 100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.8); }
-  50% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }
+.tab-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 1rem;
 }
 
-.fa-lightbulb {
-  animation: glow 2s ease-in-out infinite;
-}
-
-.btn-icon {
-  background: none;
-  border: none;
-  color: white;
-  padding: 0.25rem;
-  font-size: 1.2rem;
+.tab-button {
+  background: rgba(0, 0, 0, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
   cursor: pointer;
-  transition: color 0.3s ease;
+  transition: all 0.2s ease;
 }
 
-.btn-icon:hover {
-  color: rgba(255, 255, 255, 0.8);
+.tab-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tab-button.active {
+  background: rgba(66, 133, 244, 0.3);
+  color: white;
+  border-color: rgba(66, 133, 244, 0.5);
+}
+
+/* Navbar brand improvements */
+.navbar-brand-section {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-brand {
+  color: white;
+  font-weight: 600;
+  font-size: 1.25rem;
+  margin-left: 0.5rem;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.large-navbar .navbar-brand {
+  font-size: 1.35rem;
+}
+
+/* Ensure the canvas looks good across all device sizes */
+@media (max-width: 767.98px) {
+  .navbar-canvas {
+    height: 100%;
+  }
+  
+  .shrink-navbar .navbar-canvas {
+    transform: translateY(-92vh);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .shrink-navbar .navbar-canvas {
+    transform: translateY(-93vh);
+  }
+}
+
+/* Ensure Three.js renderer appearance */
+canvas {
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Styles des icônes corrigés */
+.logo-settings {
+  width: 18px !important;
+  height: 18px !important;
+  transition: transform 0.3s ease;
+  filter: brightness(1.2);
+}
+
+.btn-icon:hover .logo-settings {
+  transform: rotate(30deg);
+}
+
+.light-icon {
+  width: 14px !important;
+  height: 14px !important;
+  filter: brightness(1.2);
+  margin-right: 5px;
 }

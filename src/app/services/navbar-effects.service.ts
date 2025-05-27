@@ -5,12 +5,33 @@ import { BehaviorSubject, Subscription } from 'rxjs';
   providedIn: 'root'
 })
 export class NavbarEffectsService implements OnDestroy {
-  private isShrunkSubject = new BehaviorSubject<boolean>(true); // Start collapsed
+  private isShrunkSubject = new BehaviorSubject<boolean>(false); // Start expanded
   isShrunk$ = this.isShrunkSubject.asObservable();
 
   constructor() {
-    // Force shrunk state initially
+    // Force expanded state initially to match visual appearance
+    this.isShrunkSubject.next(false);
+  }
+  
+  /**
+   * Get current shrunk state
+   */
+  get currentShrunkState(): boolean {
+    return this.isShrunkSubject.value;
+  }
+  
+  /**
+   * Shrink the navbar
+   */
+  shrinkNavbar(): void {
     this.isShrunkSubject.next(true);
+  }
+  
+  /**
+   * Expand the navbar
+   */
+  expandNavbar(): void {
+    this.isShrunkSubject.next(false);
   }
   /**
    * Toggle navbar between expanded and shrunk states
