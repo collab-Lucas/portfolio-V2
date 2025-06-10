@@ -60,7 +60,6 @@ export class NavbarThreeService {
   ) {
     this.navbarElement = document.querySelector('.navbar');
   }
-
   /**
    * Initialise la scène Three.js pour la navbar
    */
@@ -82,6 +81,13 @@ export class NavbarThreeService {
     this.navbarRenderer.setSize(window.innerWidth, CANVAS_HEIGHT);
     this.navbarRenderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.navbarRenderer.toneMappingExposure = 1;
+      // Enregistrer la scène auprès du service de lumières
+    this.lightService.registerScene(this.navbarScene, 'navbar', this.navbarRenderer);
+    
+    // Enregistrement global pour la compatibilité
+    if (window.registerScene) {
+      window.registerScene(this.navbarScene, 'navbar', this.navbarRenderer);
+    }
     
     // Lumières de base
     this.setupLights();
@@ -92,43 +98,26 @@ export class NavbarThreeService {
     // Démarrer l'animation
     this.animate();
   }
-
   /**
    * Configure les lumières pour la navbar
    */
   private setupLights() {
-    // Lumière ambiante
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    this.ambientLight.name = 'Lumière ambiante';
-    this.navbarScene.add(this.ambientLight);
+    // Utiliser le LightService pour créer un ensemble standard de lumières
+    const lights = this.lightService.createStandardLightSet(this.navbarScene, {
+      sceneType: 'navbar',
+      color: '#ffffff',
+      ambientIntensity: 0.5,
+      directionalIntensity: 0.8,
+      includePoint: false,
+      shadowQuality: this.lowQualityMode ? 'low' : 'high'
+    });
     
-    // Lumière directionnelle
-    this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    // Stocker les références aux lumières principales
+    this.ambientLight = lights.ambient;
+    this.directionalLight = lights.directional!;
+    
+    // Configuration supplémentaire pour la lumière directionnelle
     this.directionalLight.position.set(-5, 15, 10);
-    this.directionalLight.castShadow = true;
-    this.directionalLight.name = 'Lumière directionnelle';
-    
-    // Configuration détaillée des ombres
-    const shadowQuality = 2048;
-    this.directionalLight.shadow.mapSize.width = shadowQuality;
-    this.directionalLight.shadow.mapSize.height = shadowQuality;
-    this.directionalLight.shadow.camera.near = 0.5;
-    this.directionalLight.shadow.camera.far = 50;
-    this.directionalLight.shadow.camera.left = -15;
-    this.directionalLight.shadow.camera.right = 15;
-    this.directionalLight.shadow.camera.top = 15;
-    this.directionalLight.shadow.camera.bottom = -15;
-    this.directionalLight.shadow.bias = -0.0005;
-    this.directionalLight.shadow.normalBias = 0.02;
-    this.directionalLight.shadow.radius = 2;
-    
-    this.navbarScene.add(this.directionalLight);
-    
-    // Initialiser les lumières dans le service de lumières
-    this.lightService.refreshLights([{
-      scene: this.navbarScene,
-      type: 'navbar'
-    }]);
   }
 
   /**
@@ -140,19 +129,18 @@ export class NavbarThreeService {
     // Load navbar_ico
     loader.load(
       'assets/models/navbar_ico.glb',
-      (gltf: GLTF) => {
-        // Configurer l'objet chargé pour le support des ombres
+      (gltf: GLTF) => {        // Configurer l'objet chargé pour le support des ombres
         gltf.scene.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             this.commonService.configureShadowsForObject(child, true, true);
           }
         });
 
+        // Utiliser l'AnimationService pour gérer les animations
         if (gltf.animations && gltf.animations.length > 0) {
-          const icoMixer = new THREE.AnimationMixer(gltf.scene);
-          this.mixers.push(icoMixer);
-          const icoAction = icoMixer.clipAction(gltf.animations[0]);
-          this.animationActions.push(icoAction);
+          const { mixer, actions } = this.animationService.setupGLTFAnimations(gltf, false);
+          this.mixers.push(mixer);
+          this.animationActions.push(...actions);
         }
 
         this.navbarScene.add(gltf.scene);
@@ -172,19 +160,18 @@ export class NavbarThreeService {
     // Load navbar_torus
     loader.load(
       'assets/models/navbar_torus.glb',
-      (gltf: GLTF) => {
-        gltf.scene.traverse((child) => {
+      (gltf: GLTF) => {        gltf.scene.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             this.commonService.configureShadowsForObject(child, true, true);
             this.commonService.configureTorus(child);
           }
         });
 
+        // Utiliser l'AnimationService pour gérer les animations
         if (gltf.animations && gltf.animations.length > 0) {
-          const torusMixer = new THREE.AnimationMixer(gltf.scene);
-          this.mixers.push(torusMixer);
-          const torusAction = torusMixer.clipAction(gltf.animations[0]);
-          this.animationActions.push(torusAction);
+          const { mixer, actions } = this.animationService.setupGLTFAnimations(gltf, false);
+          this.mixers.push(mixer);
+          this.animationActions.push(...actions);
         }
 
         this.navbarScene.add(gltf.scene);
@@ -246,13 +233,10 @@ export class NavbarThreeService {
               this.lightService.configureShadowsForLight(child);
             }
           }
-        });
-
+        });        // Utiliser l'AnimationService pour gérer les animations
         if (gltf.animations && gltf.animations.length > 0) {
-          const sceneMixer = new THREE.AnimationMixer(gltf.scene);
-          this.mixers.push(sceneMixer);
-          const sceneAction = sceneMixer.clipAction(gltf.animations[0]);
-          sceneAction.play();
+          const { mixer, actions } = this.animationService.setupGLTFAnimations(gltf, true);
+          this.mixers.push(mixer);
         }
 
         this.navbarScene.add(gltf.scene);
@@ -294,75 +278,63 @@ export class NavbarThreeService {
       }
     }
   }
-
   /**
    * Boucle d'animation principale
    */
-  animate(time: number = 0) {
+  animate() {
     if (!this.navbarRenderer || !this.navbarScene || !this.navbarCamera) {
       this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
       return;
     }
-
-    // Limiter la fréquence de mise à jour des animations
-    const currentTime = performance.now();
-    const timeDiff = currentTime - this.lastAnimationTime;
-    const frameInterval = 1000 / this.animationFrameRate;
     
-    if (timeDiff > frameInterval) {
-      this.lastAnimationTime = currentTime - (timeDiff % frameInterval);
-      
-      const delta = this.clock.getDelta();
-      
-      // Mise à jour des mixers d'animation
-      this.mixers.forEach(mixer => {
-        if (mixer) mixer.update(delta);
-      });
-
-      // Mettre à jour la rotation de la scène
-      this.currentRotationX += (this.targetRotationX - this.currentRotationX) * 0.03;
-      this.currentRotationY += (this.targetRotationY - this.currentRotationY) * 0.03;
-      
-      const isLarge = this.navbarElement && !this.navbarElement.classList.contains('shrink-navbar');
-      
-      // Mettre à jour régulièrement les ombres
-      const shadowUpdateInterval = this.lowQualityMode ? 5000 : 2000;
-      if (currentTime - this.lastShadowUpdate > shadowUpdateInterval) {
-        this.forceUpdateShadows();
+    // Utiliser le service d'animation pour gérer la boucle d'animation
+    this.animationFrameId = this.animationService.startAnimationLoop(
+      (time: number, delta: number) => {
+        // Mettre à jour la rotation de la scène
+        this.currentRotationX += (this.targetRotationX - this.currentRotationX) * 0.03;
+        this.currentRotationY += (this.targetRotationY - this.currentRotationY) * 0.03;
         
-        // Chercher et optimiser le torus si nécessaire
-        if (!this.torusShadowsOptimized && currentTime > 5000) {
-          this.optimizeLightsForTorusShadows();
-          this.torusShadowsOptimized = true;
-        }
+        const isLarge = this.navbarElement && !this.navbarElement.classList.contains('shrink-navbar');
+        const currentTime = performance.now();
         
-        this.lastShadowUpdate = currentTime;
-      }
-
-      if (isLarge) {
-        const timeSec = currentTime * 0.001;
-        this.navbarScene.rotation.x = this.currentRotationX;
-        this.navbarScene.rotation.y = this.currentRotationY;
-        this.navbarScene.position.y = Math.sin(timeSec * 0.3) * 0.1;
-        
-        if (this.navbarRenderer.shadowMap.enabled !== true) {
-          this.navbarRenderer.shadowMap.enabled = true;
+        // Mettre à jour régulièrement les ombres
+        const shadowUpdateInterval = this.lowQualityMode ? 5000 : 2000;
+        if (currentTime - this.lastShadowUpdate > shadowUpdateInterval) {
           this.forceUpdateShadows();
+          
+          // Chercher et optimiser le torus si nécessaire
+          if (!this.torusShadowsOptimized && currentTime > 5000) {
+            this.optimizeLightsForTorusShadows();
+            this.torusShadowsOptimized = true;
+          }
+          
+          this.lastShadowUpdate = currentTime;
         }
-      } else {
-        this.navbarScene.position.y = THREE.MathUtils.lerp(this.navbarScene.position.y, 0, 0.05);
-        this.navbarScene.rotation.x = THREE.MathUtils.lerp(this.navbarScene.rotation.x, 0, 0.05);
-        this.navbarScene.rotation.y = THREE.MathUtils.lerp(this.navbarScene.rotation.y, 0, 0.05);
-        
-        if (this.navbarRenderer.shadowMap.enabled !== true) {
-          this.navbarRenderer.shadowMap.enabled = true;
-        }
-      }
 
-      this.navbarRenderer.render(this.navbarScene, this.navbarCamera);
-    }
-    
-    this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
+        if (isLarge) {
+          const timeSec = currentTime * 0.001;
+          this.navbarScene.rotation.x = this.currentRotationX;
+          this.navbarScene.rotation.y = this.currentRotationY;
+          this.navbarScene.position.y = Math.sin(timeSec * 0.3) * 0.1;
+          
+          if (this.navbarRenderer.shadowMap.enabled !== true) {
+            this.navbarRenderer.shadowMap.enabled = true;
+            this.forceUpdateShadows();
+          }
+        } else {
+          this.navbarScene.position.y = THREE.MathUtils.lerp(this.navbarScene.position.y, 0, 0.05);
+          this.navbarScene.rotation.x = THREE.MathUtils.lerp(this.navbarScene.rotation.x, 0, 0.05);
+          this.navbarScene.rotation.y = THREE.MathUtils.lerp(this.navbarScene.rotation.y, 0, 0.05);
+          
+          if (this.navbarRenderer.shadowMap.enabled !== true) {
+            this.navbarRenderer.shadowMap.enabled = true;
+          }
+        }
+
+        this.navbarRenderer.render(this.navbarScene, this.navbarCamera);
+      },
+      this.lowQualityMode ? 24 : 30
+    );
   }
 
   /**
@@ -487,13 +459,9 @@ export class NavbarThreeService {
    */
   dispose() {
     if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
+      this.animationService.stopAnimationLoop(this.animationFrameId);
+      this.animationFrameId = null;
     }
-    
-    // Arrêter les animations
-    this.mixers.forEach(mixer => {
-      mixer.stopAllAction();
-    });
     
     // Nettoyer la scène et les ressources
     if (this.navbarScene) {

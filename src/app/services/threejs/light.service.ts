@@ -17,6 +17,12 @@ export interface SimpleLight {
   scene: 'navbar' | 'background';
 }
 
+interface SceneReference {
+  scene: THREE.Scene;
+  type: 'navbar' | 'background';
+  renderer?: THREE.WebGLRenderer;
+}
+
 /**
  * Service pour gérer les lumières dans Three.js
  * Centralise toutes les opérations relatives aux lumières
@@ -25,8 +31,22 @@ export interface SimpleLight {
 export class LightService {
   private simpleLights: SimpleLight[] = [];
   private simpleLightsSubject = new BehaviorSubject<SimpleLight[]>([]);
+  private sceneRefs: SceneReference[] = [];
+  constructor() {
+    // Déclaration globale pour permettre l'accès depuis d'autres services
+    window.lightServiceInstance = this;
+  }
 
-  constructor() {}
+  /**
+   * Enregistre une scène pour une utilisation ultérieure
+   */
+  registerScene(scene: THREE.Scene, type: 'navbar' | 'background', renderer?: THREE.WebGLRenderer): void {
+    // Vérifier si la scène existe déjà
+    const exists = this.sceneRefs.some(ref => ref.scene === scene && ref.type === type);
+    if (!exists) {
+      this.sceneRefs.push({ scene, type, renderer });
+    }
+  }
 
   /**
    * Récupère toutes les lumières sous forme observable
@@ -52,37 +72,102 @@ export class LightService {
   /**
    * Définir l'intensité d'une lumière par son nom
    */
-  setLightIntensity(lightName: string, intensity: number, scene?: THREE.Scene): void {
+  setLightIntensity(lightName: string, intensity: number): void {
     // Si l'intensité est 0, désactiver la lumière complètement
     const shouldDisable = intensity === 0;
     
-    this.updateLight(lightName, { 
-      intensity, 
-      enabled: shouldDisable ? false : true 
-    }, scene);
+    // Trouver la lumière dans notre liste
+    const lightObj = this.simpleLights.find(l => l.name === lightName);
+    if (!lightObj) return;
+    
+    // Mettre à jour SimpleLight
+    lightObj.intensity = intensity;
+    if (shouldDisable) {
+      lightObj.enabled = false;
+    }
+    
+    // Mettre à jour la lumière dans toutes les scènes qui la contiennent
+    const relevantScenes = this.sceneRefs.filter(ref => ref.type === lightObj.scene);
+    
+    relevantScenes.forEach(({ scene }) => {
+      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
+      if (threeLight && 'intensity' in threeLight) {
+        (threeLight as any).intensity = intensity;
+        if (shouldDisable) {
+          threeLight.visible = false;
+        }
+      }
+    });
+    
+    // Notifier les abonnés
+    this.simpleLightsSubject.next([...this.simpleLights]);
   }
 
   /**
    * Définir la couleur d'une lumière par son nom
    */
-  setLightColor(lightName: string, color: string, scene?: THREE.Scene): void {
-    this.updateLight(lightName, { color }, scene);
+  setLightColor(lightName: string, color: string): void {
+    // Trouver la lumière dans notre liste
+    const lightObj = this.simpleLights.find(l => l.name === lightName);
+    if (!lightObj) return;
+    
+    // Mettre à jour SimpleLight
+    lightObj.color = color;
+    
+    // Mettre à jour la lumière dans toutes les scènes qui la contiennent
+    const relevantScenes = this.sceneRefs.filter(ref => ref.type === lightObj.scene);
+    
+    relevantScenes.forEach(({ scene }) => {
+      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
+      if (threeLight && 'color' in threeLight) {
+        (threeLight as any).color.set(color);
+      }
+    });
+    
+    // Notifier les abonnés
+    this.simpleLightsSubject.next([...this.simpleLights]);
   }
 
   /**
    * Définir la visibilité d'une lumière par son nom
    */
-  setLightVisibility(lightName: string, visible: boolean, scene?: THREE.Scene): void {
-    this.updateLight(lightName, { enabled: visible }, scene);
+  setLightVisibility(lightName: string, visible: boolean): void {
+    // Trouver la lumière dans notre liste
+    const lightObj = this.simpleLights.find(l => l.name === lightName);
+    if (!lightObj) return;
+    
+    // Mettre à jour SimpleLight
+    lightObj.enabled = visible;
+    
+    // Mettre à jour la lumière dans toutes les scènes qui la contiennent
+    const relevantScenes = this.sceneRefs.filter(ref => ref.type === lightObj.scene);
+    
+    relevantScenes.forEach(({ scene }) => {
+      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
+      if (threeLight) {
+        threeLight.visible = visible;
+      }
+    });
+    
+    // Notifier les abonnés
+    this.simpleLightsSubject.next([...this.simpleLights]);
   }
   
   /**
    * Définir si une lumière projette des ombres
    */
-  setLightCastShadow(lightName: string, castShadow: boolean, scene?: THREE.Scene): void {
-    this.updateLight(lightName, { castShadow }, scene);
+  setLightCastShadow(lightName: string, castShadow: boolean): void {
+    // Trouver la lumière dans notre liste
+    const lightObj = this.simpleLights.find(l => l.name === lightName);
+    if (!lightObj) return;
     
-    if (scene) {
+    // Mettre à jour SimpleLight
+    lightObj.castShadow = castShadow;
+    
+    // Mettre à jour la lumière dans toutes les scènes qui la contiennent
+    const relevantScenes = this.sceneRefs.filter(ref => ref.type === lightObj.scene);
+    
+    relevantScenes.forEach(({ scene }) => {
       const threeLight = scene.getObjectByName(lightName) as THREE.Light;
       if (threeLight && 'castShadow' in threeLight) {
         (threeLight as any).castShadow = castShadow;
@@ -92,7 +177,10 @@ export class LightService {
           this.configureShadowsForLight(threeLight);
         }
       }
-    }
+    });
+    
+    // Notifier les abonnés
+    this.simpleLightsSubject.next([...this.simpleLights]);
   }
 
   /**
@@ -159,7 +247,8 @@ export class LightService {
 
   /**
    * Configure les ombres pour une lumière
-   */  configureShadowsForLight(light: THREE.Light): void {
+   */  
+  configureShadowsForLight(light: THREE.Light): void {
     if (!light.shadow) return;
     
     // Configuration de base
@@ -205,9 +294,14 @@ export class LightService {
    * Configure la qualité des ombres pour toutes les lumières
    */
   configureShadowQuality(
-    quality: 'low' | 'medium' | 'high' = 'medium', 
-    scenes: { scene: THREE.Scene, renderer: THREE.WebGLRenderer }[]
+    quality: 'low' | 'medium' | 'high' = 'medium',
+    scenes?: { scene: THREE.Scene, renderer: THREE.WebGLRenderer }[]
   ): void {
+    // Si aucune scène n'est fournie, utiliser les scènes enregistrées
+    const scenesToUpdate = scenes || this.sceneRefs
+      .filter(ref => ref.renderer)
+      .map(ref => ({ scene: ref.scene, renderer: ref.renderer! }));
+    
     // Configuration selon la qualité choisie
     let shadowMapSize: number;
     let type: THREE.ShadowMapType;
@@ -228,7 +322,7 @@ export class LightService {
     }
     
     // Appliquer aux renderers
-    scenes.forEach(({ renderer }) => {
+    scenesToUpdate.forEach(({ renderer }) => {
       if (renderer) {
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = type;
@@ -236,11 +330,12 @@ export class LightService {
     });
     
     // Mettre à jour les paramètres de qualité des ombres sur toutes les lumières
-    scenes.forEach(({ scene }) => {
+    scenesToUpdate.forEach(({ scene }) => {
       scene.traverse(obj => {
         if (obj instanceof THREE.Light && 'castShadow' in obj && obj.castShadow) {
           if (!obj.shadow) return;
-            obj.shadow.mapSize.width = shadowMapSize;
+          
+          obj.shadow.mapSize.width = shadowMapSize;
           obj.shadow.mapSize.height = shadowMapSize;
           
           if (obj instanceof THREE.DirectionalLight) {
@@ -257,7 +352,8 @@ export class LightService {
             (obj.shadow.camera as any).far = 25;
             obj.shadow.bias = -0.001;
           }
-            // Mettre à jour la caméra d'ombre
+          
+          // Mettre à jour la caméra d'ombre
           try {
             if (obj.shadow.camera && 
                 (obj.shadow.camera instanceof THREE.PerspectiveCamera || 
@@ -281,9 +377,14 @@ export class LightService {
   /**
    * Force la mise à jour des ombres pour toutes les lumières
    */
-  forceUpdateShadows(scenes: { scene: THREE.Scene, renderer: THREE.WebGLRenderer }[]): void {
+  forceUpdateShadows(scenes?: { scene: THREE.Scene, renderer: THREE.WebGLRenderer }[]): void {
+    // Si aucune scène n'est fournie, utiliser les scènes enregistrées
+    const scenesToUpdate = scenes || this.sceneRefs
+      .filter(ref => ref.renderer)
+      .map(ref => ({ scene: ref.scene, renderer: ref.renderer! }));
+      
     // Forcer le rendu des ombres pour les renderers
-    scenes.forEach(({ renderer }) => {
+    scenesToUpdate.forEach(({ renderer }) => {
       if (renderer) {
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.needsUpdate = true;
@@ -291,7 +392,7 @@ export class LightService {
     });
     
     // Forcer la mise à jour des shadow maps pour chaque lumière
-    scenes.forEach(({ scene }) => {
+    scenesToUpdate.forEach(({ scene }) => {
       scene.traverse(obj => {
         if (obj instanceof THREE.Light && obj.castShadow && obj.shadow) {
           obj.shadow.needsUpdate = true;
@@ -314,14 +415,18 @@ export class LightService {
   /**
    * Initialise/rafraîchit la liste des lumières depuis les scènes
    */
-  refreshLights(scenes: { scene: THREE.Scene, type: 'navbar' | 'background' }[]): void {
+  refreshLights(scenes?: { scene: THREE.Scene, type: 'navbar' | 'background' }[]): void {
+    // Si aucune scène n'est fournie, utiliser les scènes enregistrées
+    const scenesToRefresh = scenes || this.sceneRefs;
+    
     // Sauvegarder les états actuels des lumières avant de vider la liste
     const lightStates = new Map<string, Partial<SimpleLight>>();
     this.simpleLights.forEach(light => {
       lightStates.set(light.name + '_' + light.scene, {
         intensity: light.intensity,
         color: light.color,
-        enabled: light.enabled
+        enabled: light.enabled,
+        castShadow: light.castShadow
       });
     });
 
@@ -329,10 +434,11 @@ export class LightService {
     this.simpleLights = [];
 
     // Parcourir toutes les scènes
-    scenes.forEach(({ scene, type }) => {
+    scenesToRefresh.forEach(({ scene, type }) => {
       if (scene) {
         scene.traverse(obj => {
           if (obj instanceof THREE.Light) {
+            // Ajouter la lumière à notre liste
             this.addSimpleLight(obj, type);
             
             // Restaurer l'état précédent si disponible
@@ -348,6 +454,10 @@ export class LightService {
               
               if (savedState.enabled !== undefined) {
                 obj.visible = savedState.enabled;
+              }
+              
+              if (savedState.castShadow !== undefined && 'castShadow' in obj) {
+                (obj as any).castShadow = savedState.castShadow;
               }
               
               // Mettre à jour l'objet SimpleLight
@@ -440,5 +550,78 @@ export class LightService {
       return (light as any).castShadow;
     }
     return false;
+  }
+
+  /**
+   * Crée un ensemble standard de lumières pour une scène
+   * @param scene La scène où ajouter les lumières
+   * @param options Options de configuration des lumières
+   * @returns Les objets de lumière créés
+   */
+  createStandardLightSet(scene: THREE.Scene, options: {
+    sceneType: 'navbar' | 'background',
+    color?: string,
+    ambientIntensity?: number,
+    directionalIntensity?: number,
+    pointLightIntensity?: number,
+    includeDirectional?: boolean,
+    includePoint?: boolean,
+    shadowQuality?: 'low' | 'medium' | 'high'
+  }): {
+    ambient: THREE.AmbientLight,
+    directional?: THREE.DirectionalLight,
+    point?: THREE.PointLight
+  } {
+    const color = options.color || '#ffffff';
+    const result: {
+      ambient: THREE.AmbientLight,
+      directional?: THREE.DirectionalLight,
+      point?: THREE.PointLight
+    } = {
+      ambient: new THREE.AmbientLight(0xffffff, options.ambientIntensity || 0.5)
+    };
+    
+    // Configure ambient light
+    result.ambient.name = options.sceneType === 'navbar' ? 'Lumière ambiante' : 'Ambiance de fond';
+    scene.add(result.ambient);
+    
+    // Add directional light if requested
+    if (options.includeDirectional !== false) {
+      const directional = new THREE.DirectionalLight(color, options.directionalIntensity || 0.8);
+      directional.position.set(-5, 15, 10);
+      directional.castShadow = true;
+      directional.name = options.sceneType === 'navbar' ? 'Lumière directionnelle' : 'Direction de fond';
+      
+      // Configure shadow quality
+      this.configureShadowsForLight(directional);
+      
+      scene.add(directional);
+      result.directional = directional;
+    }
+    
+    // Add point light if requested
+    if (options.includePoint !== false) {
+      const point = new THREE.PointLight(color, options.pointLightIntensity || 0.8);
+      point.position.set(0, 0, 2);
+      point.castShadow = true;
+      point.name = options.sceneType === 'navbar' ? 'Lumière ponctuelle' : 'Lumière de fond';
+      
+      // Configure shadow quality
+      this.configureShadowsForLight(point);
+      
+      scene.add(point);
+      result.point = point;
+    }
+    
+    // Ajouter la scène à la liste des scènes à gérer
+    this.registerScene(scene, options.sceneType);
+    
+    // Update lights in the service
+    this.refreshLights([{
+      scene,
+      type: options.sceneType
+    }]);
+    
+    return result;
   }
 }

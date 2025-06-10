@@ -29,7 +29,6 @@ export class BackgroundThreeService {
     private lightService: LightService,
     private animationService: AnimationService
   ) {}
-
   /**
    * Initialise la scène Three.js pour le background
    * @param canvas L'élément canvas où rendre la scène
@@ -56,6 +55,13 @@ export class BackgroundThreeService {
       shadowMapEnabled: true,
       shadowMapType: THREE.BasicShadowMap
     });
+      // Enregistrer la scène auprès du service de lumières
+    this.lightService.registerScene(this.backgroundScene, 'background', this.backgroundRenderer);
+    
+    // Enregistrement global pour la compatibilité
+    if (window.registerScene) {
+      window.registerScene(this.backgroundScene, 'background', this.backgroundRenderer);
+    }
     
     // Configurer les lumières
     this.setupLights();
@@ -66,29 +72,26 @@ export class BackgroundThreeService {
     // Démarrer l'animation
     this.animate();
   }
-
   /**
    * Configure les lumières pour la scène de fond
    */
   private setupLights() {
-    // Lumière ambiante
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
-    this.ambientLight.name = 'Ambiance de fond';
-    this.backgroundScene.add(this.ambientLight);
+    // Utiliser le LightService pour créer un ensemble standard de lumières
+    const lights = this.lightService.createStandardLightSet(this.backgroundScene, {
+      sceneType: 'background',
+      color: this.currentColor.value,
+      ambientIntensity: 0.3,
+      includeDirectional: false,
+      pointLightIntensity: 0.8,
+      shadowQuality: this.lowQualityMode ? 'low' : 'medium'
+    });
     
-    // Lumière ponctuelle principale
-    this.light = new THREE.PointLight(this.currentColor.value, 0.8);
+    // Stocker les références aux lumières
+    this.ambientLight = lights.ambient;
+    this.light = lights.point!;
+    
+    // Configurer la position de la lumière ponctuelle
     this.light.position.set(0, 0, 2);
-    this.light.name = 'Lumière de fond';
-    this.light.castShadow = true;
-    this.lightService.configureShadowsForLight(this.light);
-    this.backgroundScene.add(this.light);
-    
-    // Initialiser les lumières dans le service de lumières
-    this.lightService.refreshLights([{
-      scene: this.backgroundScene,
-      type: 'background'
-    }]);
   }
 
   /**
@@ -255,31 +258,25 @@ export class BackgroundThreeService {
       }
     }
   }
-
   /**
    * Boucle d'animation principale
    */
   private animate() {
     if (!this.backgroundRenderer || !this.backgroundScene || !this.backgroundCamera) return;
 
-    const render = () => {
-      const delta = this.clock.getDelta();
-      const elapsedTime = this.clock.getElapsedTime();
-      
-      // Mise à jour des animations
-      this.animationService.update(delta);
-      
-      // Animation de base des objets
-      this.animateBackgroundObjects(elapsedTime, delta);
-      
-      // Rendu de la scène
-      this.backgroundRenderer.render(this.backgroundScene, this.backgroundCamera);
-      
-      // Continuer la boucle d'animation
-      this.animationFrameId = requestAnimationFrame(render);
-    };
-
-    render();
+    // Utiliser le service d'animation pour gérer la boucle d'animation
+    this.animationFrameId = this.animationService.startAnimationLoop(
+      (time: number, delta: number) => {
+        const elapsedTime = this.clock.getElapsedTime();
+        
+        // Animation de base des objets
+        this.animateBackgroundObjects(elapsedTime, delta);
+        
+        // Rendu de la scène
+        this.backgroundRenderer.render(this.backgroundScene, this.backgroundCamera);
+      },
+      this.lowQualityMode ? 24 : 30
+    );
   }
   
   /**
@@ -309,17 +306,14 @@ export class BackgroundThreeService {
       this.light.position.y = 1 + Math.cos(time * 0.15) * 1;
     }
   }
-
   /**
    * Nettoie les ressources pour éviter les fuites de mémoire
    */
   dispose() {
     if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
+      this.animationService.stopAnimationLoop(this.animationFrameId);
+      this.animationFrameId = null;
     }
-    
-    // Nettoyer les ressources
-    this.animationService.dispose();
     
     if (this.backgroundScene) {
       this.commonService.disposeScene(this.backgroundScene);

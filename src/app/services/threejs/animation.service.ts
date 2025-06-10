@@ -16,6 +16,9 @@ export interface AnimationProperties {
 export class AnimationService {
   private mixers: THREE.AnimationMixer[] = [];
   private clock = new THREE.Clock();
+  private animationFrameIds: number[] = [];
+  private animationFrameRate = 30;
+  private lastAnimationTime = 0;
 
   /**
    * Crée un mixer d'animation pour un modèle 3D
@@ -67,6 +70,56 @@ export class AnimationService {
     this.mixers.forEach(mixer => {
       mixer.update(dt);
     });
+  }
+
+  /**
+   * Configure et démarre une boucle d'animation optimisée
+   * @param renderCallback Fonction de rendu à appeler à chaque frame
+   * @param frameRate Taux de rafraîchissement cible (frames par seconde)
+   * @returns ID d'animation pour l'annulation
+   */
+  startAnimationLoop(
+    renderCallback: (time: number, delta: number) => void,
+    frameRate: number = this.animationFrameRate
+  ): number {
+    this.animationFrameRate = frameRate;
+    let lastFrameTime = 0;
+    const frameInterval = 1000 / frameRate;
+    
+    const animate = (time: number) => {
+      const animFrameId = requestAnimationFrame(animate);
+      this.animationFrameIds.push(animFrameId);
+      
+      // Limiter le taux de rafraîchissement
+      const currentTime = performance.now();
+      const elapsed = currentTime - lastFrameTime;
+      
+      if (elapsed > frameInterval) {
+        lastFrameTime = currentTime - (elapsed % frameInterval);
+        const delta = this.clock.getDelta();
+        
+        // Mettre à jour les animations
+        this.update(delta);
+        
+        // Exécuter le callback de rendu
+        renderCallback(time, delta);
+      }
+      
+      return animFrameId;
+    };
+    
+    const id = requestAnimationFrame(animate);
+    this.animationFrameIds.push(id);
+    return id;
+  }
+
+  /**
+   * Arrête une boucle d'animation spécifique
+   * @param id ID d'animation à arrêter
+   */
+  stopAnimationLoop(id: number): void {
+    cancelAnimationFrame(id);
+    this.animationFrameIds = this.animationFrameIds.filter(frameId => frameId !== id);
   }
 
   /**
@@ -202,6 +255,13 @@ export class AnimationService {
    * Nettoie les ressources d'animation
    */
   dispose(): void {
+    // Arrêter toutes les boucles d'animation
+    this.animationFrameIds.forEach(id => {
+      cancelAnimationFrame(id);
+    });
+    this.animationFrameIds = [];
+    
+    // Arrêter tous les mixers
     this.mixers.forEach(mixer => {
       mixer.stopAllAction();
     });

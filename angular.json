@@ -27,13 +27,13 @@
             "styles": [
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
               "src/styles.css"
-            ],
-            "scripts": [
+            ],            "scripts": [
               "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js",
               "src/assets/js/aos.min.js",
               "src/assets/js/bs-init.js",
               "src/assets/js/bold-and-dark.js",
-              "src/assets/js/navbar-effects.js"
+              "src/assets/js/navbar-effects.js",
+              "src/app/services/threejs/scene-registration.js"
             ]
           },
           "configurations": {
