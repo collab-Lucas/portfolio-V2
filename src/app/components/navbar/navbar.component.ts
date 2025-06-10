@@ -1,7 +1,7 @@
 import { Component, ElementRef, OnInit, OnDestroy, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ThreeService } from '../../services/three.service';
-import { SimpleLight } from '../../services/three.service';
+import { SimpleLight } from '../../services/threejs/light.service';
 import { ColorService } from '../../services/color.service';
 import { NavbarEffectsService } from '../../services/navbar-effects.service';
 import { Observable, Subscription } from 'rxjs';

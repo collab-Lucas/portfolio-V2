@@ -5,28 +5,12 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-/**
- * Interface pour les lumières de la navbar
- * Définit la structure d'une lumière avec ses propriétés configurables
- */
-export interface NavbarLight {
-  name: string;
-  type: string;
-  intensity: number;
-  color: string;
-  enabled: boolean;
-  position?: { x: number; y: number; z: number };
-  castShadow?: boolean;
-}
+import { CommonThreeService } from './threejs/common-three.service';
+import { LightService } from './threejs/light.service';
+import { AnimationService } from './threejs/animation.service';
 
 /**
  * Service spécialisé pour gérer les effets Three.js de la barre de navigation
- * 
- * Ce service est responsable de:
- * - L'initialisation et la gestion de la scène Three.js pour la navbar
- * - La gestion des lumières et des objets 3D dans cette scène
- * - Le suivi des interactions utilisateur (mouvement de souris)
- * - La configuration des animations pour les éléments de la navbar
  */
 @Injectable({
   providedIn: 'root'
@@ -38,117 +22,347 @@ export class NavbarThreeService {
   private navbarScene!: THREE.Scene;
   private navbarCamera!: THREE.PerspectiveCamera;
   private navbarRenderer!: THREE.WebGLRenderer;
-  private mixer: THREE.AnimationMixer | null = null;
   private mixers: THREE.AnimationMixer[] = [];
-  private animations: THREE.AnimationClip[] = [];
+  private animationActions: THREE.AnimationAction[] = [];
   private clock = new THREE.Clock();
   
-  // Variables pour gérer la synchronisation des animations
+  // Variables pour la gestion des modèles et animations
   private modelLoadingStatus = {
     ico: false,
     torus: false,
     scene: false
   };
-  private animationActions: THREE.AnimationAction[] = [];
 
   // Lumières principales de la navbar
   private ambientLight!: THREE.AmbientLight;
   private directionalLight!: THREE.DirectionalLight;
-  private lights: NavbarLight[] = [];
-
+  
+  // Variables pour l'interaction utilisateur
+  private targetRotationX = 0;
+  private targetRotationY = 0;
+  private currentRotationX = 0;
+  private currentRotationY = 0;
+  private navbarElement: HTMLElement | null = null;
+  
+  // Performance
+  private lowQualityMode = false;
+  private animationFrameRate = 24;
+  private lastAnimationTime = 0;
+  private lastShadowUpdate = 0;
+  private torusShadowsOptimized = false;
+  
   private animationFrameId: number | null = null;
 
-  constructor() {}
+  constructor(
+    private commonService: CommonThreeService,
+    private lightService: LightService,
+    private animationService: AnimationService
+  ) {
+    this.navbarElement = document.querySelector('.navbar');
+  }
 
   /**
    * Initialise la scène Three.js pour la navbar
-   * @param canvas L'élément canvas où rendre la scène
    */
   initNavbar(canvas: HTMLCanvasElement) {
-    // Initialisation de la scène, caméra, renderer
     this.navbarScene = new THREE.Scene();
-    this.navbarCamera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
-    this.navbarCamera.position.z = 5;
+    this.navbarScene.background = null;
 
-    this.navbarRenderer = new THREE.WebGLRenderer({
-      canvas: canvas,
+    const CANVAS_HEIGHT = window.innerHeight;
+    
+    // Initialisation du renderer avec support des ombres
+    this.navbarRenderer = this.commonService.createRenderer(canvas, {
       alpha: true,
-      antialias: true
+      antialias: !this.lowQualityMode,
+      precision: this.lowQualityMode ? 'lowp' : 'mediump',
+      powerPreference: 'low-power',
+      shadowMapEnabled: true,
+      shadowMapType: THREE.PCFSoftShadowMap
     });
-    this.navbarRenderer.setSize(window.innerWidth, window.innerHeight);
-    this.navbarRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-    // Initialisation des lumières
+    this.navbarRenderer.setSize(window.innerWidth, CANVAS_HEIGHT);
+    this.navbarRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.navbarRenderer.toneMappingExposure = 1;
+    
+    // Lumières de base
     this.setupLights();
     
-    // Ajout des objets 3D
-    this.addNavbarObjects();
+    // Charger les modèles
+    this.loadNavbarModels();
     
-    // Démarrage de l'animation
+    // Démarrer l'animation
     this.animate();
   }
 
   /**
-   * Met en place les lumières pour la navbar
+   * Configure les lumières pour la navbar
    */
   private setupLights() {
     // Lumière ambiante
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    this.ambientLight.name = 'Lumière ambiante';
     this.navbarScene.add(this.ambientLight);
-    this.lights.push({
-      name: 'Lumière ambiante',
-      type: 'AmbientLight',
-      intensity: 0.4,
-      color: '#ffffff',
-      enabled: true
-    });
-
+    
     // Lumière directionnelle
-    this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.05);
-    this.directionalLight.position.set(0, 1, 2);
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    this.directionalLight.position.set(-5, 15, 10);
+    this.directionalLight.castShadow = true;
+    this.directionalLight.name = 'Lumière directionnelle';
+    
+    // Configuration détaillée des ombres
+    const shadowQuality = 2048;
+    this.directionalLight.shadow.mapSize.width = shadowQuality;
+    this.directionalLight.shadow.mapSize.height = shadowQuality;
+    this.directionalLight.shadow.camera.near = 0.5;
+    this.directionalLight.shadow.camera.far = 50;
+    this.directionalLight.shadow.camera.left = -15;
+    this.directionalLight.shadow.camera.right = 15;
+    this.directionalLight.shadow.camera.top = 15;
+    this.directionalLight.shadow.camera.bottom = -15;
+    this.directionalLight.shadow.bias = -0.0005;
+    this.directionalLight.shadow.normalBias = 0.02;
+    this.directionalLight.shadow.radius = 2;
+    
     this.navbarScene.add(this.directionalLight);
-    this.lights.push({
-      name: 'Lumière directionnelle',
-      type: 'DirectionalLight',
-      intensity: 0.05,
-      color: '#ffffff',
-      enabled: true,
-      position: { x: 0, y: 1, z: 2 }
-    });
+    
+    // Initialiser les lumières dans le service de lumières
+    this.lightService.refreshLights([{
+      scene: this.navbarScene,
+      type: 'navbar'
+    }]);
   }
 
   /**
-   * Ajoute des objets 3D à la scène de la navbar
+   * Charge les modèles de la navbar
    */
-  private addNavbarObjects() {
-    // Ajouter vos objets 3D pour la navbar ici
-    // Par exemple, un logo 3D, etc.
+  private loadNavbarModels() {
+    const loader = new GLTFLoader();
+      
+    // Load navbar_ico
+    loader.load(
+      'assets/models/navbar_ico.glb',
+      (gltf: GLTF) => {
+        // Configurer l'objet chargé pour le support des ombres
+        gltf.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            this.commonService.configureShadowsForObject(child, true, true);
+          }
+        });
+
+        if (gltf.animations && gltf.animations.length > 0) {
+          const icoMixer = new THREE.AnimationMixer(gltf.scene);
+          this.mixers.push(icoMixer);
+          const icoAction = icoMixer.clipAction(gltf.animations[0]);
+          this.animationActions.push(icoAction);
+        }
+
+        this.navbarScene.add(gltf.scene);
+        
+        // Marquer ce modèle comme chargé
+        this.modelLoadingStatus.ico = true;
+        // Vérifier si tous les modèles sont chargés
+        this.checkAndStartAnimations();
+      },
+      undefined,
+      (err: unknown) => {
+        console.error('Error loading navbar_ico:', err);
+        this.modelLoadingStatus.ico = true;
+      }
+    );
     
-    // Géométrie icosaèdre pour démo
-    const geometry = new THREE.IcosahedronGeometry(1, 0);
-    const material = new THREE.MeshStandardMaterial({ 
-      color: this.currentColor.value,
-      wireframe: false
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.userData = { type: 'navbarObject' }; // Marquer comme objet de la navbar
-    this.navbarScene.add(mesh);
+    // Load navbar_torus
+    loader.load(
+      'assets/models/navbar_torus.glb',
+      (gltf: GLTF) => {
+        gltf.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            this.commonService.configureShadowsForObject(child, true, true);
+            this.commonService.configureTorus(child);
+          }
+        });
+
+        if (gltf.animations && gltf.animations.length > 0) {
+          const torusMixer = new THREE.AnimationMixer(gltf.scene);
+          this.mixers.push(torusMixer);
+          const torusAction = torusMixer.clipAction(gltf.animations[0]);
+          this.animationActions.push(torusAction);
+        }
+
+        this.navbarScene.add(gltf.scene);
+        
+        // Marquer ce modèle comme chargé
+        this.modelLoadingStatus.torus = true;
+        // Vérifier si tous les modèles sont chargés
+        this.checkAndStartAnimations();
+      },
+      undefined,
+      (err: unknown) => {
+        console.error('Error loading navbar_torus:', err);
+        this.modelLoadingStatus.torus = true;
+      }
+    );
     
-    // Ajouter un torus comme élément décoratif
-    const torusGeometry = new THREE.TorusKnotGeometry(0.5, 0.2, 100, 16);
-    const torusMaterial = new THREE.MeshStandardMaterial({ 
-      color: this.currentColor.value,
-      wireframe: true
-    });
-    const torus = new THREE.Mesh(torusGeometry, torusMaterial);
-    torus.position.set(-2, 0, 0);
-    torus.userData = { type: 'navbarObject' }; // Marquer comme objet de la navbar
-    this.navbarScene.add(torus);
+    // Load navbar_scene
+    loader.load(
+      'assets/models/navbar_scene.glb',
+      (gltf: GLTF) => {
+        gltf.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            this.commonService.configureShadowsForObject(child, true, true);
+            
+            // Améliorer les matériaux pour un meilleur rendu des ombres
+            if (child.material instanceof THREE.MeshStandardMaterial || 
+                child.material instanceof THREE.MeshPhysicalMaterial) {
+              child.material.envMapIntensity = 1.0;
+              child.material.roughness = Math.max(0.3, child.material.roughness);
+              if (child.material.metalness > 0.7) {
+                child.material.metalness = 0.7;
+              }
+              child.material.needsUpdate = true;
+            }
+          }
+            if (child instanceof THREE.Camera) {
+            this.navbarCamera = child as THREE.PerspectiveCamera;
+            this.navbarCamera.aspect = window.innerWidth / window.innerHeight;
+            this.navbarCamera.updateProjectionMatrix();
+          }
+          
+          // Récupérer les lumières importées
+          if (child instanceof THREE.Light) {
+            // Nommer la lumière si pas de nom défini
+            if (!child.name || child.name.trim() === '') {
+              const type = this.lightService['getLightType'](child);
+              const count = this.navbarScene.children.filter(
+                c => c instanceof THREE.Light && this.lightService['getLightType'](c as THREE.Light) === type
+              ).length;
+              child.name = `${type} ${count + 1}`;
+            }
+            
+            // Activer les ombres pour les lumières
+            if ((child instanceof THREE.DirectionalLight || 
+                child instanceof THREE.SpotLight || 
+                child instanceof THREE.PointLight) && 
+                (!('castShadow' in child) || !child.castShadow)) {
+              child.castShadow = true;
+              this.lightService.configureShadowsForLight(child);
+            }
+          }
+        });
+
+        if (gltf.animations && gltf.animations.length > 0) {
+          const sceneMixer = new THREE.AnimationMixer(gltf.scene);
+          this.mixers.push(sceneMixer);
+          const sceneAction = sceneMixer.clipAction(gltf.animations[0]);
+          sceneAction.play();
+        }
+
+        this.navbarScene.add(gltf.scene);
+        
+        // Mettre à jour les lumières
+        this.lightService.refreshLights([{
+          scene: this.navbarScene,
+          type: 'navbar'
+        }]);
+        
+        // Marquer ce modèle comme chargé
+        this.modelLoadingStatus.scene = true;
+        // Vérifier si tous les modèles sont chargés
+        this.checkAndStartAnimations();
+      },
+      undefined,
+      (err: unknown) => {
+        console.error('Error loading navbar_scene:', err);
+        this.modelLoadingStatus.scene = true;
+      }
+    );
+  }
+  
+  /**
+   * Met à jour la position de la souris pour les effets interactifs
+   */
+  updateMousePosition(mouseX: number, mouseY: number) {
+    if (this.navbarScene) {
+      const navbar = document.querySelector('.navbar') as HTMLElement;
+      const isLarge = navbar && !navbar.classList.contains('shrink-navbar');
+      
+      if (isLarge) {
+        // Réduire la sensibilité de rotation
+        this.targetRotationY = mouseX * 0.2;
+        this.targetRotationX = mouseY * 0.1;
+      } else {
+        this.targetRotationX = 0;
+        this.targetRotationY = 0;
+      }
+    }
+  }
+
+  /**
+   * Boucle d'animation principale
+   */
+  animate(time: number = 0) {
+    if (!this.navbarRenderer || !this.navbarScene || !this.navbarCamera) {
+      this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
+      return;
+    }
+
+    // Limiter la fréquence de mise à jour des animations
+    const currentTime = performance.now();
+    const timeDiff = currentTime - this.lastAnimationTime;
+    const frameInterval = 1000 / this.animationFrameRate;
+    
+    if (timeDiff > frameInterval) {
+      this.lastAnimationTime = currentTime - (timeDiff % frameInterval);
+      
+      const delta = this.clock.getDelta();
+      
+      // Mise à jour des mixers d'animation
+      this.mixers.forEach(mixer => {
+        if (mixer) mixer.update(delta);
+      });
+
+      // Mettre à jour la rotation de la scène
+      this.currentRotationX += (this.targetRotationX - this.currentRotationX) * 0.03;
+      this.currentRotationY += (this.targetRotationY - this.currentRotationY) * 0.03;
+      
+      const isLarge = this.navbarElement && !this.navbarElement.classList.contains('shrink-navbar');
+      
+      // Mettre à jour régulièrement les ombres
+      const shadowUpdateInterval = this.lowQualityMode ? 5000 : 2000;
+      if (currentTime - this.lastShadowUpdate > shadowUpdateInterval) {
+        this.forceUpdateShadows();
+        
+        // Chercher et optimiser le torus si nécessaire
+        if (!this.torusShadowsOptimized && currentTime > 5000) {
+          this.optimizeLightsForTorusShadows();
+          this.torusShadowsOptimized = true;
+        }
+        
+        this.lastShadowUpdate = currentTime;
+      }
+
+      if (isLarge) {
+        const timeSec = currentTime * 0.001;
+        this.navbarScene.rotation.x = this.currentRotationX;
+        this.navbarScene.rotation.y = this.currentRotationY;
+        this.navbarScene.position.y = Math.sin(timeSec * 0.3) * 0.1;
+        
+        if (this.navbarRenderer.shadowMap.enabled !== true) {
+          this.navbarRenderer.shadowMap.enabled = true;
+          this.forceUpdateShadows();
+        }
+      } else {
+        this.navbarScene.position.y = THREE.MathUtils.lerp(this.navbarScene.position.y, 0, 0.05);
+        this.navbarScene.rotation.x = THREE.MathUtils.lerp(this.navbarScene.rotation.x, 0, 0.05);
+        this.navbarScene.rotation.y = THREE.MathUtils.lerp(this.navbarScene.rotation.y, 0, 0.05);
+        
+        if (this.navbarRenderer.shadowMap.enabled !== true) {
+          this.navbarRenderer.shadowMap.enabled = true;
+        }
+      }
+
+      this.navbarRenderer.render(this.navbarScene, this.navbarCamera);
+    }
+    
+    this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
   }
 
   /**
@@ -157,194 +371,137 @@ export class NavbarThreeService {
   onResize() {
     if (!this.navbarRenderer || !this.navbarCamera) return;
     
-    // Mettre à jour les dimensions du renderer et le ratio d'aspect de la caméra
-    this.navbarRenderer.setSize(window.innerWidth, window.innerHeight);
-    this.navbarCamera.aspect = window.innerWidth / window.innerHeight;
+    const CANVAS_HEIGHT = window.innerHeight;
+    this.navbarCamera.aspect = window.innerWidth / CANVAS_HEIGHT;
     this.navbarCamera.updateProjectionMatrix();
+    this.navbarRenderer.setSize(window.innerWidth, CANVAS_HEIGHT);
   }
 
   /**
-   * Mettre à jour la position de la souris pour les effets interactifs
-   * @param mouseX Position X de la souris (-1 à 1)
-   * @param mouseY Position Y de la souris (-1 à 1)
+   * Force la mise à jour des ombres
    */
-  updateMousePosition(mouseX: number, mouseY: number) {
-    if (!this.navbarScene || !this.navbarCamera) return;
+  private forceUpdateShadows(): void {
+    if (!this.navbarRenderer || !this.navbarScene) return;
     
-    // Utiliser les coordonnées de la souris pour des effets interactifs
-    // Par exemple, faire tourner légèrement la caméra ou les objets
-    this.navbarScene.rotation.y = mouseX * 0.1;
-    this.navbarScene.rotation.x = mouseY * 0.1;
+    // Forcer le rendu des ombres pour le renderer
+    this.navbarRenderer.shadowMap.enabled = true;
+    this.navbarRenderer.shadowMap.needsUpdate = true;
+    
+    // Utiliser le LightService pour mettre à jour les ombres
+    this.lightService.forceUpdateShadows([{
+      scene: this.navbarScene,
+      renderer: this.navbarRenderer
+    }]);
   }
 
   /**
-   * Boucle d'animation principale
+   * Optimise les lumières pour mieux faire apparaître les ombres du torus
    */
-  animate() {
-    if (!this.navbarRenderer || !this.navbarScene || !this.navbarCamera) return;
-
-    const render = () => {
-      // Mettre à jour les mixers d'animation
-      const delta = this.clock.getDelta();
-      this.mixers.forEach(mixer => mixer.update(delta));
-      
-      // Rendu de la scène
-      this.navbarRenderer.render(this.navbarScene, this.navbarCamera);
-      
-      // Continuer la boucle d'animation
-      this.animationFrameId = requestAnimationFrame(render);
-    };
-
-    render();
+  private optimizeLightsForTorusShadows(): void {
+    if (!this.navbarScene || !this.directionalLight) return;
+    
+    // Ajuster la position et l'intensité de la lumière directionnelle principale
+    this.directionalLight.position.set(-8, 12, 8);
+    this.directionalLight.intensity = 0.9;
+    
+    // Rechercher et optimiser le torus
+    this.navbarScene.traverse((obj: THREE.Object3D) => {
+      if (obj instanceof THREE.Mesh) {
+        // S'assurer que tous les objets peuvent projeter et recevoir des ombres
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        
+        // Si c'est le torus, appliquer un traitement spécial
+        if (obj.name.includes('torus') || 
+            (obj.parent && obj.parent.name && obj.parent.name.includes('torus'))) {
+          console.log('Torus trouvé, optimisation des ombres...');
+          
+          // Ajuster sa position si nécessaire
+          if (obj.position.y < 0.5) {
+            obj.position.y += 0.5;
+          }
+          
+          // Appliquer la configuration spéciale au torus
+          this.commonService.configureTorus(obj);
+        }
+      }
+    });
+    
+    // Forcer une mise à jour immédiate des ombres
+    this.forceUpdateShadows();
   }
 
   /**
-   * Obtenir la couleur actuelle
+   * Définit le mode basse qualité
+   * @param enabled Activer ou non le mode basse qualité
+   */
+  setLowQualityMode(enabled: boolean) {
+    this.lowQualityMode = enabled;
+    
+    if (this.navbarRenderer) {
+      this.navbarRenderer.setPixelRatio(enabled ? 1.0 : Math.min(1.5, window.devicePixelRatio));
+      this.navbarRenderer.shadowMap.type = enabled ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    }
+    
+    // Ajuster le taux de rafraîchissement des animations
+    this.animationFrameRate = enabled ? 24 : 30;
+    
+    // Mettre à jour la qualité des ombres
+    this.lightService.configureShadowQuality(enabled ? 'low' : 'medium', [{
+      scene: this.navbarScene,
+      renderer: this.navbarRenderer
+    }]);
+  }
+
+  /**
+   * Définit la couleur actuelle
+   * @param color Nouvelle couleur
+   */
+  setCurrentColor(color: string) {
+    this.currentColor.next(color);
+  }
+  
+  /**
+   * Obtient la couleur actuelle
    */
   getCurrentColor(): Observable<string> {
     return this.currentColor.asObservable();
   }
 
   /**
-   * Définir la couleur actuelle
-   * @param color Nouvelle couleur
+   * Vérifier si tous les modèles sont chargés et démarrer les animations
    */
-  setCurrentColor(color: string) {
-    this.currentColor.next(color);
-    
-    // Mettre à jour la couleur des objets de la scène
-    this.navbarScene.traverse((object) => {
-      if (object instanceof THREE.Mesh && object.material instanceof THREE.MeshStandardMaterial) {
-        object.material.color.set(color);
-      }
-    });
-  }
-
-  /**
-   * Récupère toutes les lumières de la scène navbar
-   */
-  getLights(): Observable<NavbarLight[]> {
-    return new BehaviorSubject<NavbarLight[]>(this.lights).asObservable();
-  }
-
-  /**
-   * Modifie l'intensité d'une lumière spécifique
-   * @param lightName Nom de la lumière à modifier
-   * @param intensity Nouvelle intensité
-   */
-  setLightIntensity(lightName: string, intensity: number): void {
-    // Trouver l'index de la lumière dans le tableau
-    const lightIndex = this.lights.findIndex(light => light.name === lightName);
-    
-    if (lightIndex === -1) {
-      console.warn(`Lumière "${lightName}" non trouvée`);
-      return;
-    }
-    
-    // Mettre à jour l'intensité dans le tableau de lumières
-    this.lights[lightIndex].intensity = intensity;
-    
-    // Mettre à jour l'objet Three.js correspondant
-    const light = this.findThreeLightByName(lightName);
-    if (light && 'intensity' in light) {
-      light.intensity = intensity;
-    }
-  }
-
-  /**
-   * Modifie la couleur d'une lumière spécifique
-   * @param lightName Nom de la lumière à modifier
-   * @param color Nouvelle couleur au format hexadécimal
-   */
-  setLightColor(lightName: string, color: string): void {
-    // Trouver l'index de la lumière dans le tableau
-    const lightIndex = this.lights.findIndex(light => light.name === lightName);
-    
-    if (lightIndex === -1) {
-      console.warn(`Lumière "${lightName}" non trouvée`);
-      return;
-    }
-    
-    // Mettre à jour la couleur dans le tableau de lumières
-    this.lights[lightIndex].color = color;
-    
-    // Mettre à jour l'objet Three.js correspondant
-    const light = this.findThreeLightByName(lightName);
-    if (light && 'color' in light && light.color instanceof THREE.Color) {
-      light.color.set(color);
-    }
-  }
-
-  /**
-   * Active ou désactive une lumière spécifique
-   * @param lightName Nom de la lumière à modifier
-   */
-  toggleLight(lightName: string): void {
-    // Trouver l'index de la lumière dans le tableau
-    const lightIndex = this.lights.findIndex(light => light.name === lightName);
-    
-    if (lightIndex === -1) {
-      console.warn(`Lumière "${lightName}" non trouvée`);
-      return;
-    }
-    
-    // Inverser l'état d'activation
-    const newState = !this.lights[lightIndex].enabled;
-    this.lights[lightIndex].enabled = newState;
-    
-    // Mettre à jour l'objet Three.js correspondant
-    const light = this.findThreeLightByName(lightName);
-    if (light) {
-      light.visible = newState;
-    }
-  }
-
-  /**
-   * Trouve une lumière Three.js par son nom
-   * @param name Nom de la lumière à trouver
-   * @returns L'objet Three.js Light correspondant
-   */
-  private findThreeLightByName(name: string): THREE.Light | null {
-    let foundLight: THREE.Light | null = null;
-    
-    // Cas particuliers pour les lumières principales
-    if (name === 'Lumière ambiante') {
-      return this.ambientLight;
-    } else if (name === 'Lumière directionnelle') {
-      return this.directionalLight;
-    }
+  private checkAndStartAnimations(): void {
+    if (this.modelLoadingStatus.ico && this.modelLoadingStatus.torus) {
+      console.log('Tous les modèles sont chargés, démarrage des animations synchronisées');
       
-    // Chercher parmi les autres lumières de la scène
-    this.navbarScene.traverse((object) => {
-      if (object instanceof THREE.Light && object.userData && object.userData['name'] === name) {
-        foundLight = object;
-      }
-    });
-    
-    return foundLight;
+      this.animationActions.forEach(action => {
+        action.reset();
+        action.play();
+      });
+    }
   }
 
   /**
-   * Nettoyer les ressources
+   * Nettoie les ressources
    */
   dispose() {
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
     }
     
-    // Nettoyer la scène et les ressources
-    this.navbarScene?.traverse((object) => {
-      if (object instanceof THREE.Mesh) {
-        object.geometry.dispose();
-        
-        if (Array.isArray(object.material)) {
-          object.material.forEach(material => material.dispose());
-        } else {
-          object.material.dispose();
-        }
-      }
+    // Arrêter les animations
+    this.mixers.forEach(mixer => {
+      mixer.stopAllAction();
     });
     
-    this.navbarRenderer?.dispose();
+    // Nettoyer la scène et les ressources
+    if (this.navbarScene) {
+      this.commonService.disposeScene(this.navbarScene);
+    }
+    
+    if (this.navbarRenderer) {
+      this.navbarRenderer.dispose();
+    }
   }
 }

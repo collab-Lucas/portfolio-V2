@@ -1,18 +1,11 @@
 import { Injectable } from '@angular/core';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { CommonThreeService } from './threejs/common-three.service';
+import { LightService } from './threejs/light.service';
+import { AnimationService } from './threejs/animation.service';
 
-/**
- * Service spécialisé pour gérer les effets Three.js d'arrière-plan
- * 
- * Ce service est responsable de:
- * - L'initialisation et la gestion de la scène Three.js pour l'arrière-plan
- * - La création et l'animation d'objets 3D qui réagissent au défilement
- * - L'application d'effets de parallaxe et d'animation sur les éléments de fond
- * - L'optimisation des performances pour les animations d'arrière-plan
- * - La génération d'effets visuels réactifs aux interactions utilisateur
- * - La synchronisation des animations avec le défilement et les mouvements de souris
- */
 @Injectable({
   providedIn: 'root'
 })
@@ -22,14 +15,20 @@ export class BackgroundThreeService {
   private backgroundRenderer!: THREE.WebGLRenderer;
   private backgroundObjects: THREE.Mesh[] = [];
   private light!: THREE.PointLight;
-  private ambientLight!: THREE.AmbientLight; 
+  private ambientLight!: THREE.AmbientLight;
   private clock = new THREE.Clock();
+  private currentColor = new BehaviorSubject<string>('#66ccff');
   private scrollPosition = new BehaviorSubject<number>(0);
   private mousePosition = new THREE.Vector2(0, 0);
   
   private animationFrameId: number | null = null;
+  private lowQualityMode = false;
 
-  constructor() {}
+  constructor(
+    private commonService: CommonThreeService,
+    private lightService: LightService,
+    private animationService: AnimationService
+  ) {}
 
   /**
    * Initialise la scène Three.js pour le background
@@ -49,20 +48,20 @@ export class BackgroundThreeService {
     this.backgroundCamera.position.set(0, 0, 5);
 
     // Configuration du renderer
-    this.backgroundRenderer = new THREE.WebGLRenderer({ 
-      canvas: canvas, 
+    this.backgroundRenderer = this.commonService.createRenderer(canvas, {
       alpha: true,
-      antialias: true,
-      precision: 'mediump'
+      antialias: !this.lowQualityMode,
+      precision: this.lowQualityMode ? 'lowp' : 'mediump',
+      powerPreference: 'low-power',
+      shadowMapEnabled: true,
+      shadowMapType: THREE.BasicShadowMap
     });
-    this.backgroundRenderer.setSize(window.innerWidth, window.innerHeight);
-    this.backgroundRenderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio));
     
     // Configurer les lumières
     this.setupLights();
     
     // Initialiser les objets de fond
-    this.initScrollObjects();
+    this.initBackgroundObjects();
     
     // Démarrer l'animation
     this.animate();
@@ -74,155 +73,113 @@ export class BackgroundThreeService {
   private setupLights() {
     // Lumière ambiante
     this.ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    this.ambientLight.name = 'Ambiance de fond';
     this.backgroundScene.add(this.ambientLight);
     
     // Lumière ponctuelle principale
-    this.light = new THREE.PointLight(0xffffff, 0.8);
+    this.light = new THREE.PointLight(this.currentColor.value, 0.8);
     this.light.position.set(0, 0, 2);
+    this.light.name = 'Lumière de fond';
+    this.light.castShadow = true;
+    this.lightService.configureShadowsForLight(this.light);
     this.backgroundScene.add(this.light);
     
-    // Lumières additionnelles pour créer une ambiance plus riche
-    const blueLight = new THREE.PointLight(0x4444ff, 0.5);
-    blueLight.position.set(-5, 3, -3);
-    this.backgroundScene.add(blueLight);
-    
-    const pinkLight = new THREE.PointLight(0xff44aa, 0.3);
-    pinkLight.position.set(5, -2, -1);
-    this.backgroundScene.add(pinkLight);
+    // Initialiser les lumières dans le service de lumières
+    this.lightService.refreshLights([{
+      scene: this.backgroundScene,
+      type: 'background'
+    }]);
   }
 
   /**
-   * Initialise les objets 3D qui réagiront au défilement
+   * Initialise les objets 3D de fond
    */
-  private initScrollObjects() {
+  private initBackgroundObjects() {
     // Nettoyer les objets existants si nécessaire
     this.backgroundObjects.forEach(obj => this.backgroundScene.remove(obj));
     this.backgroundObjects = [];
     
-    // Créer des objets géométriques plus variés pour l'arrière-plan
-    const geometries = [
-      new THREE.IcosahedronGeometry(1, 0),
-      new THREE.TorusGeometry(0.7, 0.3, 16, 100),
-      new THREE.TorusKnotGeometry(0.6, 0.25, 64, 8, 2, 3),
-      new THREE.OctahedronGeometry(1, 0),
-      new THREE.TetrahedronGeometry(1, 0),
-      new THREE.DodecahedronGeometry(0.8, 0),
-      new THREE.SphereGeometry(0.7, 8, 8)
-    ];
-    
-    // Utiliser une palette de couleurs plus cohérente
-    const colorPalette = [
-      new THREE.Color(0x6666ff), // Bleu
-      new THREE.Color(0x66ccff), // Bleu ciel
-      new THREE.Color(0x44aaff), // Bleu électrique
-      new THREE.Color(0x8866ff), // Violet
-      new THREE.Color(0xaa66ff)  // Pourpre
-    ];
-    
+    // Créer des objets géométriques
+    const geometry = new THREE.IcosahedronGeometry(1, 0);
+    const material = new THREE.MeshStandardMaterial({
+      color: this.currentColor.value,
+      transparent: true,
+      opacity: 0.6,
+      roughness: 0.7,
+      metalness: 0.2
+    });
+
     // Créer plusieurs objets et les placer dans l'espace
-    const numObjects = 20; // Augmenter le nombre d'objets
+    const numObjects = this.lowQualityMode ? 5 : 10;
     
     for (let i = 0; i < numObjects; i++) {
-      // Sélectionner une géométrie aléatoire
-      const geometry = geometries[Math.floor(Math.random() * geometries.length)];
-      
-      // Déterminer si l'objet sera wireframe
-      const isWireframe = Math.random() > 0.5;
-      
-      // Sélectionner une couleur de la palette
-      const baseColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-      
-      // Légère variation de couleur
-      const color = new THREE.Color(baseColor);
-      color.r += (Math.random() - 0.5) * 0.2;
-      color.g += (Math.random() - 0.5) * 0.2;
-      color.b += (Math.random() - 0.5) * 0.2;
-      
-      // Créer un matériau semi-transparent
-      const material = isWireframe ? 
-        new THREE.MeshPhongMaterial({
-          color: color,
-          wireframe: true,
-          transparent: true,
-          opacity: Math.random() * 0.4 + 0.4
-        }) :
-        new THREE.MeshPhongMaterial({
-          color: color,
-          transparent: true,
-          opacity: Math.random() * 0.3 + 0.2,
-          side: THREE.DoubleSide,
-          shininess: Math.random() * 100
-        });
-      
-      // Créer le mesh
-      const mesh = new THREE.Mesh(geometry, material);
-      
-      // Distribution spatiale plus intéressante
-      const radius = 15;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.random() * Math.PI;
-      
-      // Distribution sphérique pour certains objets
-      if (i % 3 === 0) {
-        mesh.position.set(
-          radius * Math.sin(phi) * Math.cos(theta),
-          radius * Math.sin(phi) * Math.sin(theta),
-          radius * Math.cos(phi) - 10
-        );
-      } else {
-        // Distribution plus cubique pour les autres
-        mesh.position.set(
-          (Math.random() - 0.5) * 20,
-          (Math.random() - 0.5) * 20,
-          (Math.random() - 0.5) * 10 - 5
-        );
-      }
-      
-      // Rotation initiale aléatoire
+      const mesh = new THREE.Mesh(geometry, material.clone());
+      mesh.position.set(
+        (Math.random() - 0.5) * 20,
+        (Math.random() - 0.5) * 20,
+        (Math.random() - 0.5) * 20
+      );
       mesh.rotation.set(
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
       );
       
-      // Taille aléatoire
-      const scale = Math.random() * 1 + 0.5;
-      mesh.scale.set(scale, scale, scale);
+      // Configurer les ombres
+      const isCloseObject = Math.abs(mesh.position.z) < 10;
+      this.commonService.configureShadowsForObject(mesh, isCloseObject, true);
       
-      // Stocker les propriétés originales pour les animations
-      mesh.userData = {
-        originalPosition: {
-          x: mesh.position.x,
-          y: mesh.position.y,
-          z: mesh.position.z
-        },
-        originalRotation: {
-          x: mesh.rotation.x,
-          y: mesh.rotation.y,
-          z: mesh.rotation.z
-        },
-        originalScale: scale,
-        rotationSpeed: {
-          x: (Math.random() - 0.5) * 0.003,
-          y: (Math.random() - 0.5) * 0.003,
-          z: (Math.random() - 0.5) * 0.003
-        },
-        group: i % 4 // Grouper les objets pour des animations différentes
-      };
-      
-      // Ajouter à la scène et au tableau d'objets
       this.backgroundScene.add(mesh);
       this.backgroundObjects.push(mesh);
     }
   }
 
   /**
-   * Met à jour la position de défilement et déclenche des animations
+   * Charger un modèle GLTF dans la scène
+   * @param modelPath Chemin vers le modèle GLTF
+   * @param position Position du modèle
+   * @param scale Échelle du modèle
+   * @param callback Callback une fois le modèle chargé
+   */
+  loadModel(modelPath: string, position = { x: 0, y: 0, z: 0 }, scale = 1, callback?: (model: THREE.Group) => void): void {
+    const loader = new GLTFLoader();
+    
+    loader.load(
+      modelPath,
+      (gltf) => {
+        // Configurer le modèle pour les ombres
+        gltf.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            this.commonService.configureShadowsForObject(child, true, true);
+          }
+        });
+        
+        // Configurer la position et l'échelle
+        gltf.scene.position.set(position.x, position.y, position.z);
+        gltf.scene.scale.set(scale, scale, scale);
+        
+        // Ajouter à la scène
+        this.backgroundScene.add(gltf.scene);
+        
+        // Configurer les animations si disponibles
+        if (gltf.animations && gltf.animations.length > 0) {
+          const { mixer, actions } = this.animationService.setupGLTFAnimations(gltf, true);
+        }
+        
+        // Appeler le callback si fourni
+        if (callback) callback(gltf.scene);
+      },
+      undefined,
+      (error) => console.error('Error loading model:', error)
+    );
+  }
+
+  /**
+   * Met à jour la position de défilement
    * @param scrollY Position de défilement vertical
    */
   updateScrollPosition(scrollY: number) {
     this.scrollPosition.next(scrollY);
-    this.updateBackgroundOnScroll(scrollY);
   }
   
   /**
@@ -233,112 +190,39 @@ export class BackgroundThreeService {
   }
   
   /**
-   * Met à jour les éléments du background en fonction de la position de défilement
-   * @param scrollY Position de défilement vertical
+   * Met à jour la position de la souris
+   * @param mouseX Position X de la souris (-1 à 1)
+   * @param mouseY Position Y de la souris (-1 à 1)
    */
-  private updateBackgroundOnScroll(scrollY: number) {
-    if (!this.backgroundScene) return;
+  updateMousePosition(mouseX: number, mouseY: number) {
+    this.mousePosition.x = mouseX;
+    this.mousePosition.y = mouseY;
+  }
+
+  /**
+   * Définit la couleur actuelle
+   * @param color Nouvelle couleur
+   */
+  setCurrentColor(color: string) {
+    this.currentColor.next(color);
     
-    // Calculer les facteurs d'effet
-    const scrollFactor = scrollY * 0.001;
-    const viewportHeight = window.innerHeight;
+    if (this.light) {
+      this.light.color.set(color);
+    }
     
-    // Appliquer des effets aux objets de fond
-    this.backgroundObjects.forEach((obj, index) => {
-      // Stocker les positions et échelles originales si ce n'est pas déjà fait
-      if (!obj.userData['originalPosition']) {
-        obj.userData['originalPosition'] = {
-          x: obj.position.x,
-          y: obj.position.y,
-          z: obj.position.z
-        };
-      }
-      if (!obj.userData['originalScale']) {
-        obj.userData['originalScale'] = obj.scale.x;
-      }
-      if (!obj.userData['originalRotation']) {
-        obj.userData['originalRotation'] = {
-          x: obj.rotation.x,
-          y: obj.rotation.y,
-          z: obj.rotation.z
-        };
-      }
-      
-      const originalPos = obj.userData['originalPosition'];
-      const originalScale = obj.userData['originalScale'];
-      
-      // Effet de parallaxe avancé en fonction de la profondeur Z
-      // Plus l'objet est loin (Z négatif), plus l'effet est prononcé
-      const zDepth = originalPos.z;
-      const parallaxStrength = Math.max(0.5, Math.abs(zDepth) * 0.2);
-      const depthFactor = (index % 4) * 0.15 + 0.7; // Variation par groupe d'objets
-      
-      // Parallaxe horizontal et vertical basé sur le défilement
-      const horizontalOffset = Math.sin(scrollFactor * 0.8 + index * 0.2) * parallaxStrength;
-      const verticalOffset = Math.cos(scrollFactor * 0.5 + index * 0.3) * parallaxStrength * 0.7;
-      
-      // Appliquer un mouvement orbital pour certains objets
-      if (index % 3 === 0) {
-        const orbitRadius = 0.8;
-        const orbitSpeed = 0.2;
-        obj.position.x = originalPos.x + Math.sin(scrollFactor * orbitSpeed + index) * orbitRadius;
-        obj.position.z = originalPos.z + Math.cos(scrollFactor * orbitSpeed + index) * orbitRadius * 0.5;
-      } else {
-        // Pour les autres objets, appliquer un mouvement d'oscillation bidimensionnelle
-        obj.position.x = originalPos.x + horizontalOffset;
-        obj.position.z = originalPos.z + Math.sin(scrollFactor * 0.3 + index) * 0.2;
-      }
-      
-      // Mouvement vertical avec variation de phase par objet
-      obj.position.y = originalPos.y + verticalOffset;
-      
-      // Rotation dynamique avec plusieurs axes
-      obj.rotation.y = originalPos.y + scrollFactor * depthFactor;
-      obj.rotation.x = originalPos.x + Math.sin(scrollFactor * 0.5) * (index % 3 === 0 ? 0.3 : 0.15);
-      obj.rotation.z = originalPos.z + Math.cos(scrollFactor * 0.3 + index * 0.2) * 0.1;
-      
-      // Effet de pulsation sur la taille (différent selon l'indice)
-      const pulsePhase = index * 0.25;
-      const pulseFrequency = 0.4 + (index % 5) * 0.1;
-      const pulseAmplitude = 0.1 + (index % 3) * 0.05;
-      
-      const pulseFactor = 1 + Math.sin(scrollFactor * pulseFrequency + pulsePhase) * pulseAmplitude;
-      obj.scale.set(
-        originalScale * pulseFactor * (1 + Math.sin(scrollFactor * 0.3) * 0.05),
-        originalScale * pulseFactor, 
-        originalScale * pulseFactor * (1 + Math.cos(scrollFactor * 0.2) * 0.05)
-      );
-      
-      // Effet de transparence en fonction du défilement pour certains objets
-      if (obj.material instanceof THREE.Material && obj.material.transparent) {
-        const baseTrans = 0.25 + (index % 5) * 0.05;
-        const transVariation = 0.15;
-        obj.material.opacity = baseTrans + Math.sin(scrollFactor * 0.4 + index) * transVariation;
+    // Mettre à jour la couleur des objets de fond
+    this.backgroundObjects.forEach(obj => {
+      if (obj.material instanceof THREE.MeshStandardMaterial) {
+        obj.material.color.set(color);
       }
     });
-    
-    // Effets de lumière avancés
-    if (this.light) {
-      // Variation d'intensité lumineuse avec interpolation douce
-      this.light.intensity = 0.8 + Math.sin(scrollFactor * 0.8) * 0.3;
-      
-      // Mouvement orbital de la lumière
-      this.light.position.x = Math.sin(scrollFactor * 0.2) * 3;
-      this.light.position.y = 1 + Math.cos(scrollFactor * 0.15) * 1;
-      this.light.position.z = 2 + Math.sin(scrollFactor * 0.1) * 1;
-      
-      // Transitions de couleur plus élaborées
-      const hue = (scrollFactor * 0.01) % 1;
-      const saturation = 0.5 + Math.sin(scrollFactor * 0.05) * 0.2;
-      const lightness = 0.6 + Math.sin(scrollFactor * 0.07) * 0.1;
-      this.light.color.setHSL(hue, saturation, lightness);
-    }
-    
-    // Appliquer un effet subtil à la lumière ambiante aussi
-    if (this.ambientLight) {
-      const ambientIntensity = 0.3 + Math.sin(scrollFactor * 0.1) * 0.05;
-      this.ambientLight.intensity = ambientIntensity;
-    }
+  }
+  
+  /**
+   * Obtient la couleur actuelle
+   */
+  getCurrentColor(): Observable<string> {
+    return this.currentColor.asObservable();
   }
 
   /**
@@ -347,51 +231,46 @@ export class BackgroundThreeService {
   onResize() {
     if (!this.backgroundRenderer || !this.backgroundCamera) return;
     
-    this.backgroundRenderer.setSize(window.innerWidth, window.innerHeight);
     this.backgroundCamera.aspect = window.innerWidth / window.innerHeight;
     this.backgroundCamera.updateProjectionMatrix();
+    this.backgroundRenderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  /**
+   * Définit le mode basse qualité
+   * @param enabled Activer ou non le mode basse qualité
+   */
+  setLowQualityMode(enabled: boolean) {
+    this.lowQualityMode = enabled;
+    
+    if (this.backgroundRenderer) {
+      this.backgroundRenderer.setPixelRatio(enabled ? 1.0 : Math.min(1.5, window.devicePixelRatio));
+      this.backgroundRenderer.shadowMap.type = enabled ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    }
+    
+    // Gérer la visibilité des objets de fond
+    if (this.backgroundObjects.length > 5) {
+      for (let i = 5; i < this.backgroundObjects.length; i++) {
+        this.backgroundObjects[i].visible = !enabled;
+      }
+    }
   }
 
   /**
    * Boucle d'animation principale
    */
-  animate() {
+  private animate() {
     if (!this.backgroundRenderer || !this.backgroundScene || !this.backgroundCamera) return;
 
     const render = () => {
       const delta = this.clock.getDelta();
       const elapsedTime = this.clock.getElapsedTime();
       
-      // Animation automatique des objets de fond avec des mouvements plus complexes
-      this.backgroundObjects.forEach((obj, index) => {
-        // Rotation de base automatique
-        obj.rotation.x += 0.001 * (index % 2 ? 1 : -1);
-        obj.rotation.z += 0.001 * (index % 3 ? 1 : -1);
-        
-        // Ajout d'une légère oscillation pour les objets les plus éloignés
-        if (obj.position.z < -2) {
-          // Mouvement sinusoïdal subtil
-          const oscillationSpeed = 0.2 + (index % 4) * 0.05;
-          const oscillationAmplitude = 0.02;
-          
-          obj.position.y += Math.sin(elapsedTime * oscillationSpeed) * oscillationAmplitude * delta;
-          obj.position.x += Math.cos(elapsedTime * oscillationSpeed * 0.7) * oscillationAmplitude * delta;
-        }
-        
-        // Effet d'ondulation pour certains objets wireframe
-        if (obj.material instanceof THREE.MeshPhongMaterial && obj.material.wireframe) {
-          const pulseFactor = 1 + Math.sin(elapsedTime * (0.5 + index * 0.1)) * 0.03;
-          obj.scale.set(pulseFactor, pulseFactor, pulseFactor);
-        }
-      });
+      // Mise à jour des animations
+      this.animationService.update(delta);
       
-      // Animation subtile de la caméra
-      if (this.mousePosition.x !== 0 || this.mousePosition.y !== 0) {
-        // Lissage du mouvement de la caméra en direction de la souris
-        this.backgroundCamera.position.x += (this.mousePosition.x * 0.5 - this.backgroundCamera.position.x) * 0.01;
-        this.backgroundCamera.position.y += (this.mousePosition.y * 0.3 - this.backgroundCamera.position.y) * 0.01;
-        this.backgroundCamera.lookAt(0, 0, 0);
-      }
+      // Animation de base des objets
+      this.animateBackgroundObjects(elapsedTime, delta);
       
       // Rendu de la scène
       this.backgroundRenderer.render(this.backgroundScene, this.backgroundCamera);
@@ -404,18 +283,30 @@ export class BackgroundThreeService {
   }
   
   /**
-   * Met à jour la position de la souris pour les effets interactifs
-   * @param mouseX Position X de la souris (-1 à 1)
-   * @param mouseY Position Y de la souris (-1 à 1)
+   * Anime les objets de fond
    */
-  updateMousePosition(mouseX: number, mouseY: number) {
-    this.mousePosition.x = mouseX;
-    this.mousePosition.y = mouseY;
+  private animateBackgroundObjects(time: number, delta: number) {
+    const scrollY = this.scrollPosition.getValue();
+    const scrollFactor = scrollY * 0.001;
     
-    // Effet léger de suivi de la souris pour la lumière principale
+    // Animation simple des objets de fond
+    this.backgroundObjects.forEach((obj, index) => {
+      // Rotation continue
+      obj.rotation.x += 0.001 * (index % 2 ? 1 : -1);
+      obj.rotation.z += 0.001 * (index % 3 ? 1 : -1);
+      
+      // Mouvement simple basé sur le temps
+      const offset = index * 0.1;
+      const animationSpeed = 0.005;
+      
+      obj.position.y = Math.sin(time * 0.3 + offset) * 0.3;
+      obj.position.x = Math.cos(time * 0.3 + offset) * 0.3;
+    });
+    
+    // Animation simple de la lumière
     if (this.light) {
-      this.light.position.x += (mouseX * 2 - this.light.position.x) * 0.05;
-      this.light.position.y += (mouseY * 1 - this.light.position.y) * 0.05;
+      this.light.position.x = Math.sin(time * 0.2) * 3;
+      this.light.position.y = 1 + Math.cos(time * 0.15) * 1;
     }
   }
 
@@ -427,19 +318,15 @@ export class BackgroundThreeService {
       cancelAnimationFrame(this.animationFrameId);
     }
     
-    // Nettoyer la scène et les ressources
-    this.backgroundScene?.traverse((object) => {
-      if (object instanceof THREE.Mesh) {
-        object.geometry.dispose();
-        
-        if (Array.isArray(object.material)) {
-          object.material.forEach(material => material.dispose());
-        } else {
-          object.material.dispose();
-        }
-      }
-    });
+    // Nettoyer les ressources
+    this.animationService.dispose();
     
-    this.backgroundRenderer?.dispose();
+    if (this.backgroundScene) {
+      this.commonService.disposeScene(this.backgroundScene);
+    }
+    
+    if (this.backgroundRenderer) {
+      this.backgroundRenderer.dispose();
+    }
   }
 }

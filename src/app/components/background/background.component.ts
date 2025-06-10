@@ -17,10 +17,10 @@ export class BackgroundComponent implements OnDestroy {
     this.threeService.animate();
     window.addEventListener('resize', this.onResize.bind(this));
   }
-
   ngOnDestroy() {
     window.removeEventListener('resize', this.onResize.bind(this));
-    this.threeService.dispose();
+    // Pas besoin de libérer toutes les ressources, juste celles de background
+    // car d'autres composants pourraient utiliser la navbar
   }
 
   private onResize() {
