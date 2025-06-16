@@ -1,21 +1,14 @@
 import * as THREE from 'three';
 import { Injectable } from '@angular/core';
+import { SceneOptions, CameraOptions, RendererOptions } from '../../types/three-options';
 
 @Injectable({ providedIn: 'root' })
-export class CommonThreeService {
-  /**
+export class CommonThreeService {  /**
    * Crée un renderer Three.js avec les options spécifiées
    * @param canvas Élément canvas à utiliser
    * @param options Options du renderer
-   */  createRenderer(canvas: HTMLCanvasElement, options: { 
-    alpha?: boolean; 
-    antialias?: boolean;
-    precision?: string;
-    powerPreference?: string;
-    shadowMapEnabled?: boolean;
-    shadowMapType?: THREE.ShadowMapType;
-    pixelRatio?: number;
-  } = {}): THREE.WebGLRenderer {    // Utiliser des valeurs par défaut avec l'opérateur de coalescence null (??)
+   */  createRenderer(canvas: HTMLCanvasElement, options: RendererOptions = {}): THREE.WebGLRenderer {
+    // Utiliser des valeurs par défaut avec l'opérateur de coalescence null (??)
     const renderer = new THREE.WebGLRenderer({ 
       canvas, 
       alpha: options.alpha ?? true, 
@@ -24,7 +17,9 @@ export class CommonThreeService {
       powerPreference: options.powerPreference ?? ('high-performance' as any)
     });
     
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    const width = options.size?.width ?? window.innerWidth;
+    const height = options.size?.height ?? window.innerHeight;
+    renderer.setSize(width, height);
     
     if (options.pixelRatio !== undefined) {
       renderer.setPixelRatio(options.pixelRatio);
@@ -173,5 +168,71 @@ export class CommonThreeService {
     // Forcer une mise à jour immédiate
     mesh.geometry.computeBoundingBox();
     mesh.geometry.computeBoundingSphere();
+  }
+
+  /**
+   * Crée et configure une scène Three.js avec les options spécifiées
+   * @param options Options de configuration de la scène
+   * @returns Scene configurée
+   */
+  setupScene(options: SceneOptions = {}): THREE.Scene {
+    const scene = new THREE.Scene();
+    
+    if (options.fog) {
+      const { color = 0x000000, near = 1, far = 1000 } = options.fog;
+      scene.fog = new THREE.Fog(color, near, far);
+    }
+    
+    return scene;
+  }
+
+  /**
+   * Crée et configure une caméra perspective Three.js avec les options spécifiées
+   * @param options Options de configuration de la caméra
+   * @returns PerspectiveCamera configurée
+   */
+  setupCamera(options: CameraOptions = {}): THREE.PerspectiveCamera {
+    const { 
+      fov = 75, 
+      aspect = window.innerWidth / window.innerHeight,
+      near = 0.1, 
+      far = 1000,
+      position = { x: 0, y: 0, z: 5 }
+    } = options;
+    
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.set(position.x, position.y, position.z);
+    
+    return camera;
+  }
+
+  /**
+   * Méthode de nettoyage réutilisable pour les objets Three.js
+   * @param obj Objet à nettoyer
+   */
+  disposeObject(obj: THREE.Object3D): void {
+    if (!obj) return;
+    
+    // Dispose geometry
+    if (obj instanceof THREE.Mesh) {
+      if (obj.geometry) {
+        obj.geometry.dispose();
+      }
+      
+      // Dispose material(s)
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(material => this.disposeMaterial(material));
+        } else {
+          this.disposeMaterial(obj.material);
+        }
+      }
+    }
+    
+    // Dispose children recursively
+    while (obj.children.length > 0) {
+      this.disposeObject(obj.children[0]);
+      obj.remove(obj.children[0]);
+    }
   }
 }

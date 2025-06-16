@@ -642,4 +642,120 @@ export class LightService {
     
     return result;
   }
+
+  /**
+   * Crée une lumière directionnelle avec des options de configuration avancées
+   * @param options Options de configuration de la lumière directionnelle
+   * @returns La lumière directionnelle créée
+   */
+  createDirectionalLight(options: {
+    color?: number;
+    intensity?: number;
+    position?: { x: number; y: number; z: number };
+    castShadow?: boolean;
+    shadowConfig?: {
+      mapSize?: { width: number; height: number };
+      camera?: { near: number; far: number; left: number; right: number; top: number; bottom: number };
+      bias?: number;
+    };
+  } = {}): THREE.DirectionalLight {
+    const {
+      color = 0xffffff,
+      intensity = 1,
+      position = { x: 5, y: 5, z: 5 },
+      castShadow = false,
+      shadowConfig
+    } = options;
+    
+    const light = new THREE.DirectionalLight(color, intensity);
+    light.position.set(position.x, position.y, position.z);
+    light.castShadow = castShadow;
+    
+    if (castShadow && shadowConfig) {
+      if (shadowConfig.mapSize) {
+        light.shadow.mapSize.width = shadowConfig.mapSize.width;
+        light.shadow.mapSize.height = shadowConfig.mapSize.height;
+      }
+      
+      if (shadowConfig.camera) {
+        const { near, far, left, right, top, bottom } = shadowConfig.camera;
+        light.shadow.camera.near = near !== undefined ? near : light.shadow.camera.near;
+        light.shadow.camera.far = far !== undefined ? far : light.shadow.camera.far;
+        light.shadow.camera.left = left !== undefined ? left : light.shadow.camera.left;
+        light.shadow.camera.right = right !== undefined ? right : light.shadow.camera.right;
+        light.shadow.camera.top = top !== undefined ? top : light.shadow.camera.top;
+        light.shadow.camera.bottom = bottom !== undefined ? bottom : light.shadow.camera.bottom;
+      }
+      
+      if (shadowConfig.bias !== undefined) {
+        light.shadow.bias = shadowConfig.bias;
+      }
+    }
+    
+    return light;
+  }
+
+  /**
+   * Crée une lumière ponctuelle avec des options de configuration avancées
+   * @param options Options de configuration de la lumière ponctuelle
+   * @returns La lumière ponctuelle créée
+   */
+  createPointLight(options: {
+    color?: number;
+    intensity?: number;
+    position?: { x: number; y: number; z: number };
+    distance?: number;
+    decay?: number;
+    castShadow?: boolean;
+    shadowConfig?: {
+      mapSize?: { width: number; height: number };
+      camera?: { near: number; far: number };
+      bias?: number;
+    };
+  } = {}): THREE.PointLight {
+    const {
+      color = 0xffffff,
+      intensity = 1,
+      position = { x: 0, y: 0, z: 0 },
+      distance = 0,
+      decay = 2,
+      castShadow = false,
+      shadowConfig
+    } = options;
+    
+    const light = new THREE.PointLight(color, intensity, distance, decay);
+    light.position.set(position.x, position.y, position.z);
+    light.castShadow = castShadow;
+    
+    if (castShadow && shadowConfig) {
+      if (shadowConfig.mapSize) {
+        light.shadow.mapSize.width = shadowConfig.mapSize.width;
+        light.shadow.mapSize.height = shadowConfig.mapSize.height;
+      }
+      
+      if (shadowConfig.camera) {
+        light.shadow.camera.near = shadowConfig.camera.near || light.shadow.camera.near;
+        light.shadow.camera.far = shadowConfig.camera.far || light.shadow.camera.far;
+      }
+      
+      if (shadowConfig.bias !== undefined) {
+        light.shadow.bias = shadowConfig.bias;
+      }
+    }
+    
+    return light;
+  }
+
+  /**
+   * Crée une lumière ambiante avec des options de configuration simples
+   * @param options Options de configuration de la lumière ambiante
+   * @returns La lumière ambiante créée
+   */
+  createAmbientLight(options: {
+    color?: number;
+    intensity?: number;
+  } = {}): THREE.AmbientLight {
+    const { color = 0xffffff, intensity = 1 } = options;
+    return new THREE.AmbientLight(color, intensity);
+  }
 }

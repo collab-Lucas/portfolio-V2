@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import * as THREE from 'three';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -8,6 +8,7 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { CommonThreeService } from './threejs/common-three.service';
 import { LightService } from './threejs/light.service';
 import { AnimationService } from './threejs/animation.service';
+import { ResizeService } from './resize.service';
 
 /**
  * Service spécialisé pour gérer les effets Three.js de la barre de navigation
@@ -15,7 +16,8 @@ import { AnimationService } from './threejs/animation.service';
 @Injectable({
   providedIn: 'root'
 })
-export class NavbarThreeService {
+export class NavbarThreeService implements OnDestroy {
+  private resizeSubscription?: Subscription;
   private currentColor = new BehaviorSubject<string>('#66ccff');
 
   // Scene properties spécifiques à la navbar
@@ -52,19 +54,19 @@ export class NavbarThreeService {
   private torusShadowsOptimized = false;
   
   private animationFrameId: number | null = null;
-
   constructor(
     private commonService: CommonThreeService,
     private lightService: LightService,
-    private animationService: AnimationService
+    private animationService: AnimationService,
+    private resizeService: ResizeService
   ) {
     this.navbarElement = document.querySelector('.navbar');
   }
   /**
    * Initialise la scène Three.js pour la navbar
-   */
-  initNavbar(canvas: HTMLCanvasElement) {
-    this.navbarScene = new THREE.Scene();
+   */  initNavbar(canvas: HTMLCanvasElement) {
+    // Utiliser setupScene du CommonThreeService
+    this.navbarScene = this.commonService.setupScene();
     this.navbarScene.background = null;
 
     const CANVAS_HEIGHT = window.innerHeight;
@@ -81,13 +83,24 @@ export class NavbarThreeService {
     this.navbarRenderer.setSize(window.innerWidth, CANVAS_HEIGHT);
     this.navbarRenderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.navbarRenderer.toneMappingExposure = 1;
+    
+    // Utiliser setupCamera du CommonThreeService
+    this.navbarCamera = this.commonService.setupCamera({
+      fov: 75,
+      aspect: window.innerWidth / CANVAS_HEIGHT,
+      near: 0.1,
+      far: 1000,
+      position: { x: 0, y: 0, z: 5 }
+    });
       // Enregistrer la scène auprès du service de lumières
     this.lightService.registerScene(this.navbarScene, 'navbar', this.navbarRenderer);
-    
-    // Enregistrement global pour la compatibilité
+      // Enregistrement global pour la compatibilité
     if (window.registerScene) {
       window.registerScene(this.navbarScene, 'navbar', this.navbarRenderer);
     }
+    
+    // Configurer l'écoute du redimensionnement
+    this.setupResizeListener();
     
     // Lumières de base
     this.setupLights();
@@ -280,16 +293,16 @@ export class NavbarThreeService {
   }
   /**
    * Boucle d'animation principale
-   */
-  animate() {
+   */  animate() {
     if (!this.navbarRenderer || !this.navbarScene || !this.navbarCamera) {
-      this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
+      // Réessayer plus tard si les composants ne sont pas encore initialisés
+      setTimeout(() => this.animate(), 100);
       return;
     }
     
-    // Utiliser le service d'animation pour gérer la boucle d'animation
-    this.animationFrameId = this.animationService.startAnimationLoop(
-      (time: number, delta: number) => {
+    // Utiliser le service d'animation pour gérer la boucle d'animation avec une méthode simplifiée
+    const stopAnimation = this.animationService.startSimpleAnimationLoop((time: number) => {
+      const delta = this.clock.getDelta();
         // Mettre à jour la rotation de la scène
         this.currentRotationX += (this.targetRotationX - this.currentRotationX) * 0.03;
         this.currentRotationY += (this.targetRotationY - this.currentRotationY) * 0.03;
@@ -328,25 +341,46 @@ export class NavbarThreeService {
           
           if (this.navbarRenderer.shadowMap.enabled !== true) {
             this.navbarRenderer.shadowMap.enabled = true;
-          }
-        }
+          }        }
 
         this.navbarRenderer.render(this.navbarScene, this.navbarCamera);
-      },
-      this.lowQualityMode ? 24 : 30
-    );
+      });
+      
+      // Stocker la référence pour pouvoir arrêter l'animation plus tard
+      if (this.animationFrameId !== null) {
+        this.animationService.stopAnimationLoop(this.animationFrameId);
+      }
+      this.animationFrameId = -1; // Marquer comme actif mais géré par le service d'animation
   }
 
   /**
    * Gère le redimensionnement de la fenêtre
-   */
-  onResize() {
+   */  onResize() {
     if (!this.navbarRenderer || !this.navbarCamera) return;
     
     const CANVAS_HEIGHT = window.innerHeight;
     this.navbarCamera.aspect = window.innerWidth / CANVAS_HEIGHT;
     this.navbarCamera.updateProjectionMatrix();
     this.navbarRenderer.setSize(window.innerWidth, CANVAS_HEIGHT);
+  }
+  
+  /**
+   * Configure l'écoute du redimensionnement via le ResizeService
+   */
+  setupResizeListener() {
+    // Désinscrire l'ancienne subscription si elle existe
+    if (this.resizeSubscription) {
+      this.resizeSubscription.unsubscribe();
+    }
+    
+    // S'abonner au service de redimensionnement
+    this.resizeSubscription = this.resizeService.resize$.subscribe(({ width, height }) => {
+      if (!this.navbarRenderer || !this.navbarCamera) return;
+      
+      this.navbarCamera.aspect = width / height;
+      this.navbarCamera.updateProjectionMatrix();
+      this.navbarRenderer.setSize(width, height);
+    });
   }
 
   /**
@@ -453,23 +487,33 @@ export class NavbarThreeService {
       });
     }
   }
-
   /**
    * Nettoie les ressources
-   */
-  dispose() {
-    if (this.animationFrameId !== null) {
+   */  dispose() {
+    if (this.animationFrameId !== null && this.animationFrameId !== -1) {
       this.animationService.stopAnimationLoop(this.animationFrameId);
       this.animationFrameId = null;
     }
     
     // Nettoyer la scène et les ressources
     if (this.navbarScene) {
-      this.commonService.disposeScene(this.navbarScene);
+      this.commonService.disposeObject(this.navbarScene);
     }
     
     if (this.navbarRenderer) {
       this.navbarRenderer.dispose();
     }
+    
+    // Désabonner du service de redimensionnement
+    if (this.resizeSubscription) {
+      this.resizeSubscription.unsubscribe();
+    }
+  }
+  
+  /**
+   * Implémentation de OnDestroy
+   */
+  ngOnDestroy() {
+    this.dispose();
   }
 }

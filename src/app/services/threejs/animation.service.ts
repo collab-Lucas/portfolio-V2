@@ -114,6 +114,35 @@ export class AnimationService {
   }
 
   /**
+   * Démarre une boucle d'animation simple avec le callback spécifié
+   * Utilisée pour les animations ne nécessitant pas un contrôle du taux de rafraîchissement
+   * @param callback Fonction appelée à chaque frame d'animation
+   * @returns Fonction pour arrêter l'animation
+   */
+  startSimpleAnimationLoop(callback: (time: number) => void): () => void {
+    let animationFrameId: number;
+    
+    const animate = (time: number) => {
+      callback(time);
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    
+    animationFrameId = requestAnimationFrame(animate);
+    
+    // Retourne une fonction pour arrêter l'animation
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        // Supprimer de notre liste d'animations
+        const index = this.animationFrameIds.indexOf(animationFrameId);
+        if (index !== -1) {
+          this.animationFrameIds.splice(index, 1);
+        }
+      }
+    };
+  }
+
+  /**
    * Arrête une boucle d'animation spécifique
    * @param id ID d'animation à arrêter
    */

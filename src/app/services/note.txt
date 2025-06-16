@@ -101,3 +101,5 @@ est ce que cela ne serait pa splus simple d'utiliser 1 fichiers pour la navbar 1
 
 
 fait le mais ne me demande pas de lancer de ligne de commande cela fait des problème
+
+<section class="about-section py-5" style="height: 100vh; display: flex; flex-direction: column; justify-content: center;" data-aos="slide-left" data-aos-duration="800" data-aos-offset="0" data-aos-delay="550">

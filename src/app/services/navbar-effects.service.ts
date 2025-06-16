@@ -19,12 +19,11 @@ export class NavbarEffectsService implements OnDestroy {
   get currentShrunkState(): boolean {
     return this.navbarStateSubject.value;
   }
-  
-  /**
+    /**
    * Toggle navbar between expanded and shrunk states
    */
   toggleNavbar(): void {
-    this.navbarStateSubject.next(!this.navbarStateSubject.value);
+    this.setNavbarState(!this.currentShrunkState);
   }
 
   /**
