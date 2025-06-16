@@ -1,7 +1,7 @@
-<section id="contact" class="p-5 text-light" style="min-height: 100vh; padding-top: 120px;">
+<section id="contact" class="p-5 text-light contact-section">
   <div class="container">
-    <h2 class="text-center mb-5" style="font-size: 2.5rem; font-weight: bold;">Contact</h2>
-    <form class="mx-auto" style="max-width: 600px;" (ngSubmit)="onSubmit()">
+    <h2 class="text-center mb-5 section-title">Contact</h2>
+    <form class="mx-auto contact-form" (ngSubmit)="onSubmit()">
       <div class="mb-3">
         <input type="text" class="form-control" placeholder="Nom" 
                [(ngModel)]="form.name" name="name" required>

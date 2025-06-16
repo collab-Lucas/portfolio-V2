@@ -7,8 +7,7 @@ export class CommonThreeService {
    * Crée un renderer Three.js avec les options spécifiées
    * @param canvas Élément canvas à utiliser
    * @param options Options du renderer
-   */
-  createRenderer(canvas: HTMLCanvasElement, options: { 
+   */  createRenderer(canvas: HTMLCanvasElement, options: { 
     alpha?: boolean; 
     antialias?: boolean;
     precision?: string;
@@ -16,13 +15,13 @@ export class CommonThreeService {
     shadowMapEnabled?: boolean;
     shadowMapType?: THREE.ShadowMapType;
     pixelRatio?: number;
-  } = {}): THREE.WebGLRenderer {
+  } = {}): THREE.WebGLRenderer {    // Utiliser des valeurs par défaut avec l'opérateur de coalescence null (??)
     const renderer = new THREE.WebGLRenderer({ 
       canvas, 
-      alpha: options.alpha !== undefined ? options.alpha : true, 
-      antialias: options.antialias !== undefined ? options.antialias : true,
-      precision: options.precision || 'highp',
-      powerPreference: options.powerPreference || 'high-performance' as any
+      alpha: options.alpha ?? true, 
+      antialias: options.antialias ?? true,
+      precision: options.precision ?? 'highp',
+      powerPreference: options.powerPreference ?? ('high-performance' as any)
     });
     
     renderer.setSize(window.innerWidth, window.innerHeight);

@@ -1,50 +1,37 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Subscription } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class NavbarEffectsService implements OnDestroy {
-  private isShrunkSubject = new BehaviorSubject<boolean>(false); // Start expanded
-  isShrunk$ = this.isShrunkSubject.asObservable();
+  private navbarStateSubject = new BehaviorSubject<boolean>(false); // Start expanded
+  isShrunk$ = this.navbarStateSubject.asObservable();
 
   constructor() {
     // Force expanded state initially to match visual appearance
-    this.isShrunkSubject.next(false);
+    this.navbarStateSubject.next(false);
   }
   
   /**
    * Get current shrunk state
    */
   get currentShrunkState(): boolean {
-    return this.isShrunkSubject.value;
+    return this.navbarStateSubject.value;
   }
   
-  /**
-   * Shrink the navbar
-   */
-  shrinkNavbar(): void {
-    this.isShrunkSubject.next(true);
-  }
-  
-  /**
-   * Expand the navbar
-   */
-  expandNavbar(): void {
-    this.isShrunkSubject.next(false);
-  }
   /**
    * Toggle navbar between expanded and shrunk states
    */
   toggleNavbar(): void {
-    this.isShrunkSubject.next(!this.isShrunkSubject.value);
+    this.navbarStateSubject.next(!this.navbarStateSubject.value);
   }
 
   /**
-   * Force the navbar to a specific state
+   * Set navbar to a specific state (true = shrunk, false = expanded)
    */
   setNavbarState(shrunk: boolean): void {
-    this.isShrunkSubject.next(shrunk);
+    this.navbarStateSubject.next(shrunk);
   }
 
   ngOnDestroy() {

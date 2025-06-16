@@ -97,16 +97,15 @@ export class ThreeService {
   }
 
   // MÉTHODES DE GESTION DES LUMIÈRES (façade vers LightService)
-
   /**
-   * Obtient toutes les lumières
+   * Obtient toutes les lumières (observable)
    */
   getLights(): Observable<SimpleLight[]> {
     return this.lightService.getLights();
   }
 
   /**
-   * Obtient toutes les lumières
+   * Obtient toutes les lumières (liste directe)
    */
   getAllLights(): SimpleLight[] {
     return this.lightService.getAllLights();

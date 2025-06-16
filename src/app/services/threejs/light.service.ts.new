@@ -17,27 +17,6 @@ export interface SimpleLight {
   scene: 'navbar' | 'background';
 }
 
-/**
- * Interface pour les lumières Three.js avec intensité
- */
-export interface LightWithIntensity extends THREE.Light {
-  intensity: number;
-}
-
-/**
- * Interface pour les lumières Three.js avec position
- */
-export interface LightWithPosition extends THREE.Light {
-  position: THREE.Vector3;
-}
-
-/**
- * Interface pour les lumières Three.js avec casting shadow
- */
-export interface LightWithShadow extends THREE.Light {
-  castShadow: boolean;
-}
-
 interface SceneReference {
   scene: THREE.Scene;
   type: 'navbar' | 'background';
@@ -53,9 +32,10 @@ export class LightService {
   private simpleLights: SimpleLight[] = [];
   private simpleLightsSubject = new BehaviorSubject<SimpleLight[]>([]);
   private sceneRefs: SceneReference[] = [];
+
   constructor() {
     // Déclaration globale pour permettre l'accès depuis d'autres services
-    window.lightServiceInstance = this;
+    (window as any).lightServiceInstance = this;
   }
 
   /**
@@ -110,9 +90,10 @@ export class LightService {
     // Mettre à jour la lumière dans toutes les scènes qui la contiennent
     const relevantScenes = this.sceneRefs.filter(ref => ref.type === lightObj.scene);
     
-    relevantScenes.forEach(({ scene }) => {      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
+    relevantScenes.forEach(({ scene }) => {
+      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
       if (threeLight && 'intensity' in threeLight) {
-        (threeLight as LightWithIntensity).intensity = intensity;
+        (threeLight as any).intensity = intensity;
         if (shouldDisable) {
           threeLight.visible = false;
         }
@@ -137,9 +118,10 @@ export class LightService {
     // Mettre à jour la lumière dans toutes les scènes qui la contiennent
     const relevantScenes = this.sceneRefs.filter(ref => ref.type === lightObj.scene);
     
-    relevantScenes.forEach(({ scene }) => {      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
+    relevantScenes.forEach(({ scene }) => {
+      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
       if (threeLight && 'color' in threeLight) {
-        (threeLight as THREE.Light & { color: THREE.Color }).color.set(color);
+        (threeLight as any).color.set(color);
       }
     });
     
@@ -214,7 +196,8 @@ export class LightService {
     
     // Mettre à jour l'objet SimpleLight
     Object.assign(light, changes);
-      // Gérer le cas spécial où l'intensity est 0
+    
+    // Gérer le cas spécial où l'intensité est 0
     if (changes.intensity === 0 && changes.enabled !== false) {
       light.enabled = false;
       changes.enabled = false;

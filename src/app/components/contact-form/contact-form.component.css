@@ -14,3 +14,19 @@
   color: #fff;
   box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1);
 }
+
+/* Nouvelles classes pour optimiser le HTML */
+.contact-section {
+  min-height: 100vh;
+  padding-top: 120px;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.contact-form {
+  max-width: 600px;
+}

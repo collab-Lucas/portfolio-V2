@@ -77,6 +77,45 @@ body, html {
 }
 
 /* Empêche Bootstrap ou d'autres styles d'appliquer un fond blanc */
-main, section, .container, .row, .col, nav, header, footer {
+main, section, .container, .row, .col, nav, header {
   background-color: transparent !important;
+}
+
+/* Style du footer */
+footer {
+    position: relative;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 70px; /* Hauteur réduite pour une barre plus compacte */
+    z-index: 10;
+    background-color: black !important;
+    color: white;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-container {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+}
+
+.icon-link {
+    color: white;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+
+.icon-link:hover {
+    opacity: 0.8;
+}
+
+.footer-icon {
+    width: 32px;
+    height: 32px;
+    /* Filtre pour rendre les icônes blanches */
+    filter: brightness(0) invert(1);
 }

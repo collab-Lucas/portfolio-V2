@@ -8,3 +8,65 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
+/* Nouvelles classes pour remplacer les styles inline */
+.full-height-section {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.card-intro {
+  background: rgba(0,0,0,0.36);
+  margin-right: 0;
+  width: auto;
+  transition: ease-in;
+  max-width: none;
+  padding-right: 0;
+  filter: contrast(100%);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.card-body-custom {
+  margin-left: 100px;
+  margin-right: 0;
+  padding: 19px;
+  width: auto;
+  padding-bottom: 19px;
+  padding-right: 200px;
+}
+
+.card-title-custom {
+  text-align: center;
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 22px;
+}
+
+.card-text-custom {
+  font-size: 28px;
+}
+
+.container-fluid-no-padding {
+  margin-right: 0;
+  margin-left: 0;
+  width: auto;
+  max-width: 100%;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.row-no-margin {
+  width: auto;
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.col-no-padding {
+  margin-right: 0;
+  width: auto;
+  padding: 0;
+  max-width: none;
+}
