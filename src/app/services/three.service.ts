@@ -32,7 +32,7 @@ export class ThreeService {
    * Initialise la scène d'arrière-plan
    */
   initBackground(canvas: HTMLCanvasElement) {
-    this.backgroundService.initBackground(canvas);
+
   }
 
   /**
@@ -47,14 +47,13 @@ export class ThreeService {
    */
   updateMousePosition(mouseX: number, mouseY: number) {
     this.navbarService.updateMousePosition(mouseX, mouseY);
-    this.backgroundService.updateMousePosition(mouseX, mouseY);
   }
 
   /**
    * Met à jour la position de défilement
    */
   updateScrollPosition(scrollY: number) {
-    this.backgroundService.updateScrollPosition(scrollY);
+
   }
 
   /**
@@ -62,7 +61,7 @@ export class ThreeService {
    */
   onResize() {
     this.navbarService.onResize();
-    this.backgroundService.onResize();
+
   }
 
   /**
@@ -70,7 +69,6 @@ export class ThreeService {
    */
   setCurrentColor(color: string): void {
     this.navbarService.setCurrentColor(color);
-    this.backgroundService.setCurrentColor(color);
   }
 
   /**
@@ -85,7 +83,6 @@ export class ThreeService {
    */
   setLowQualityMode(enabled: boolean) {
     this.navbarService.setLowQualityMode(enabled);
-    this.backgroundService.setLowQualityMode(enabled);
   }
 
   /**
@@ -187,5 +184,13 @@ export class ThreeService {
   animate(): void {
     // L'animation est maintenant gérée directement dans NavbarThreeService et BackgroundThreeService
     // Cette méthode est fournie pour la compatibilité avec l'ancienne API
+  }
+
+  /**
+   * Ajuste la caméra en fonction de l'état de la navbar
+   * @param isShrunk True si la navbar est repliée, false sinon
+   */
+  adjustCameraForNavbarState(isShrunk: boolean): void {
+    this.navbarService.adjustCameraForNavbarState(isShrunk);
   }
 }

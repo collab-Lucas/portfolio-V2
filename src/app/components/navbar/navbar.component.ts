@@ -168,7 +168,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
     }
 
     .shrink-navbar .navbar-canvas {
-      transform: translateY(-94vh);
+      transform: translateY(calc(-92vh + 2px ));
       filter: brightness(0.8);
     }
 
@@ -1322,24 +1322,32 @@ export class NavbarComponent implements OnInit, OnDestroy {
       })
     );
   }
-
   ngAfterViewInit() {
-    this.threeService.initNavbar(this.navbarCanvas.nativeElement);
-    // Appeler onResize une fois au démarrage pour gérer la largeur initiale
-    this.threeService.onResize();
-    
-    // Charger la liste initiale des lumières
-    this.updateLightsList();
-    
-    // Initialiser les lumières avec les valeurs par défaut
-    this.initializeLights();
-      
-    // S'abonner aux changements de lumières
-    this.subscriptions.push(
-      this.threeService.getLights().subscribe((lights: SimpleLight[]) => {
-        this.lights = lights;
-      })
-    );
+    setTimeout(() => {
+      // S'assurer que le canvas est prêt
+      if (this.navbarCanvas && this.navbarCanvas.nativeElement) {
+        console.log('Initialisation de la navbar 3D');
+        this.threeService.initNavbar(this.navbarCanvas.nativeElement);
+        
+        // Appeler onResize une fois au démarrage pour gérer la largeur initiale
+        this.threeService.onResize();
+        
+        // Charger la liste initiale des lumières
+        this.updateLightsList();
+        
+        // Initialiser les lumières avec les valeurs par défaut
+        this.initializeLights();
+          
+        // S'abonner aux changements de lumières
+        this.subscriptions.push(
+          this.threeService.getLights().subscribe((lights: SimpleLight[]) => {
+            this.lights = lights;
+          })
+        );
+      } else {
+        console.error('Canvas navbar non disponible');
+      }
+    }, 0);
   }
   
   /**
@@ -1706,6 +1714,14 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }
     
     // Faire le toggle seulement si aucun élément bloquant n'est cliqué
+    console.log('Toggle navbar - état actuel:', this.currentShrinkState);
     this.navbarEffects.toggleNavbar();
+    
+    // Force la mise à jour de Three.js pour qu'elle s'adapte au nouvel état
+    setTimeout(() => {
+      this.threeService.onResize();
+      // Réinitialiser les positions de la scène pour animations
+      this.threeService.updateMousePosition(0, 0);
+    }, 50);
   }
 }

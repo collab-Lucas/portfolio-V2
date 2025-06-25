@@ -1,326 +1,123 @@
 import { Injectable } from '@angular/core';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { CommonThreeService } from './threejs/common-three.service';
-import { LightService } from './threejs/light.service';
-import { AnimationService } from './threejs/animation.service';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class BackgroundThreeService {
-  private backgroundScene!: THREE.Scene;
-  private backgroundCamera!: THREE.PerspectiveCamera;
-  private backgroundRenderer!: THREE.WebGLRenderer;
-  private backgroundObjects: THREE.Mesh[] = [];
-  private light!: THREE.PointLight;
-  private ambientLight!: THREE.AmbientLight;
-  private clock = new THREE.Clock();
-  private currentColor = new BehaviorSubject<string>('#66ccff');
-  private scrollPosition = new BehaviorSubject<number>(0);
-  private mousePosition = new THREE.Vector2(0, 0);
-  
-  private animationFrameId: number | null = null;
-  private lowQualityMode = false;
+  private scene!: THREE.Scene;
+  private camera!: THREE.PerspectiveCamera;
+  private renderer!: THREE.WebGLRenderer;
+  private animationId: number | null = null;
+  private models: { [key: string]: THREE.Group } = {};
 
-  constructor(
-    private commonService: CommonThreeService,
-    private lightService: LightService,
-    private animationService: AnimationService
-  ) {}
-  /**
-   * Initialise la scène Three.js pour le background
-   * @param canvas L'élément canvas où rendre la scène
-   */
-  initBackground(canvas: HTMLCanvasElement) {
-    // Initialisation de la scène
-    this.backgroundScene = new THREE.Scene();
-    
-    // Configuration de la caméra
-    this.backgroundCamera = new THREE.PerspectiveCamera(
+  init(canvas: HTMLCanvasElement) {
+    // Scène
+    this.scene = new THREE.Scene();
+
+    // Caméra
+    this.camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      100
+      1000
     );
-    this.backgroundCamera.position.set(0, 0, 5);
+    this.camera.position.setZ(30);
+    this.camera.position.setX(-3);
 
-    // Configuration du renderer
-    this.backgroundRenderer = this.commonService.createRenderer(canvas, {
-      alpha: true,
-      antialias: !this.lowQualityMode,
-      precision: this.lowQualityMode ? 'lowp' : 'mediump',
-      powerPreference: 'low-power',
-      shadowMapEnabled: true,
-      shadowMapType: THREE.BasicShadowMap
-    });
-      // Enregistrer la scène auprès du service de lumières
-    this.lightService.registerScene(this.backgroundScene, 'background', this.backgroundRenderer);
-    
-    // Enregistrement global pour la compatibilité
-    if (window.registerScene) {
-      window.registerScene(this.backgroundScene, 'background', this.backgroundRenderer);
-    }
-    
-    // Configurer les lumières
-    this.setupLights();
-    
-    // Initialiser les objets de fond
-    this.initBackgroundObjects();
-    
-    // Démarrer l'animation
-    this.animate();
-  }
-  /**
-   * Configure les lumières pour la scène de fond
-   */
-  private setupLights() {
-    // Utiliser le LightService pour créer un ensemble standard de lumières
-    const lights = this.lightService.createStandardLightSet(this.backgroundScene, {
-      sceneType: 'background',
-      color: this.currentColor.value,
-      ambientIntensity: 0.3,
-      includeDirectional: false,
-      pointLightIntensity: 0.8,
-      shadowQuality: this.lowQualityMode ? 'low' : 'medium'
-    });
-    
-    // Stocker les références aux lumières
-    this.ambientLight = lights.ambient;
-    this.light = lights.point!;
-    
-    // Configurer la position de la lumière ponctuelle
-    this.light.position.set(0, 0, 2);
-  }
+    // Renderer
+    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.render(this.scene, this.camera);
 
-  /**
-   * Initialise les objets 3D de fond
-   */
-  private initBackgroundObjects() {
-    // Nettoyer les objets existants si nécessaire
-    this.backgroundObjects.forEach(obj => this.backgroundScene.remove(obj));
-    this.backgroundObjects = [];
-    
-    // Créer des objets géométriques
-    const geometry = new THREE.IcosahedronGeometry(1, 0);
-    const material = new THREE.MeshStandardMaterial({
-      color: this.currentColor.value,
-      transparent: true,
-      opacity: 0.6,
-      roughness: 0.7,
-      metalness: 0.2
+    // Lumières
+    const pointLight = new THREE.PointLight(0xffffff);
+    pointLight.position.set(5, 5, 5);
+    const ambientLight = new THREE.AmbientLight(0xffffff);
+    this.scene.add(pointLight, ambientLight);
+
+    // Helpers
+    const lightHelper = new THREE.PointLightHelper(pointLight);
+    const gridHelper = new THREE.GridHelper(200, 50);
+    this.scene.add(lightHelper, gridHelper);
+
+    // Contrôles
+    //const controls = new OrbitControls(this.camera, this.renderer.domElement);
+
+    // Chargement et manipulation des modèles GLB
+    this.loadGLB('prisme', 'assets/models/prisme.glb', { x: 0, y: 0, z: 0 }, 1, (prisme) => {
+      // Ici tu peux manipuler prisme après chargement
+      prisme.position.set(10, 0, 0);
+      prisme.rotation.y = Math.PI / 4;
+      // Exemple : dupliquer le prisme à des positions aléatoires
+      for (let i = 0; i < 10; i++) {
+        const clone = prisme.clone();
+        clone.position.set(
+          THREE.MathUtils.randFloatSpread(100),
+          THREE.MathUtils.randFloatSpread(100),
+          THREE.MathUtils.randFloatSpread(100)
+        );
+        this.scene.add(clone);
+      }
     });
 
-    // Créer plusieurs objets et les placer dans l'espace
-    const numObjects = this.lowQualityMode ? 5 : 10;
-    
-    for (let i = 0; i < numObjects; i++) {
-      const mesh = new THREE.Mesh(geometry, material.clone());
-      mesh.position.set(
-        (Math.random() - 0.5) * 20,
-        (Math.random() - 0.5) * 20,
-        (Math.random() - 0.5) * 20
-      );
-      mesh.rotation.set(
-        Math.random() * Math.PI,
-        Math.random() * Math.PI,
-        Math.random() * Math.PI
-      );
-      
-      // Configurer les ombres
-      const isCloseObject = Math.abs(mesh.position.z) < 10;
-      this.commonService.configureShadowsForObject(mesh, isCloseObject, true);
-      
-      this.backgroundScene.add(mesh);
-      this.backgroundObjects.push(mesh);
-    }
+    this.loadGLB('scene_bureau', 'assets/models/scene_bureau.glb', { x: 0, y: 0, z: 0 }, 1, (bureau) => {
+      // Ici tu peux manipuler bureau après chargement
+      bureau.position.z = 0;
+      bureau.position.x = 0;
+    });
+
+
+
+
+    const moveCamera = () => {
+      const t = document.body.getBoundingClientRect().top;
+
+      this.camera.position.z = t *5* -0.1;
+      this.camera.position.x = t * -0.2;
+      this.camera.rotation.y = t * -0.2;
+    };
+
+    document.body.onscroll = moveCamera;
+    moveCamera();
+
+    // Animation
+    const animate = () => {
+      this.renderer.render(this.scene, this.camera);
+      this.animationId = requestAnimationFrame(animate);
+    };
+    animate();
   }
 
-  /**
-   * Charger un modèle GLTF dans la scène
-   * @param modelPath Chemin vers le modèle GLTF
-   * @param position Position du modèle
-   * @param scale Échelle du modèle
-   * @param callback Callback une fois le modèle chargé
-   */
-  loadModel(modelPath: string, position = { x: 0, y: 0, z: 0 }, scale = 1, callback?: (model: THREE.Group) => void): void {
+  loadGLB(
+    key: string,
+    path: string,
+    position = { x: 0, y: 0, z: 0 },
+    scale = 1,
+    callback?: (model: THREE.Group) => void
+  ) {
     const loader = new GLTFLoader();
-    
     loader.load(
-      modelPath,
+      path,
       (gltf) => {
-        // Configurer le modèle pour les ombres
-        gltf.scene.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            this.commonService.configureShadowsForObject(child, true, true);
-          }
-        });
-        
-        // Configurer la position et l'échelle
         gltf.scene.position.set(position.x, position.y, position.z);
         gltf.scene.scale.set(scale, scale, scale);
-        
-        // Ajouter à la scène
-        this.backgroundScene.add(gltf.scene);
-        
-        // Configurer les animations si disponibles
-        if (gltf.animations && gltf.animations.length > 0) {
-          const { mixer, actions } = this.animationService.setupGLTFAnimations(gltf, true);
-        }
-        
-        // Appeler le callback si fourni
+        this.scene.add(gltf.scene);
+        this.models[key] = gltf.scene;
         if (callback) callback(gltf.scene);
       },
       undefined,
-      (error) => console.error('Error loading model:', error)
+      (error) => console.error('Erreur chargement GLB', error)
     );
   }
 
-  /**
-   * Met à jour la position de défilement
-   * @param scrollY Position de défilement vertical
-   */
-  updateScrollPosition(scrollY: number) {
-    this.scrollPosition.next(scrollY);
-  }
-  
-  /**
-   * Obtient la position actuelle de défilement
-   */
-  getScrollPosition(): Observable<number> {
-    return this.scrollPosition.asObservable();
-  }
-  
-  /**
-   * Met à jour la position de la souris
-   * @param mouseX Position X de la souris (-1 à 1)
-   * @param mouseY Position Y de la souris (-1 à 1)
-   */
-  updateMousePosition(mouseX: number, mouseY: number) {
-    this.mousePosition.x = mouseX;
-    this.mousePosition.y = mouseY;
-  }
-
-  /**
-   * Définit la couleur actuelle
-   * @param color Nouvelle couleur
-   */
-  setCurrentColor(color: string) {
-    this.currentColor.next(color);
-    
-    if (this.light) {
-      this.light.color.set(color);
-    }
-    
-    // Mettre à jour la couleur des objets de fond
-    this.backgroundObjects.forEach(obj => {
-      if (obj.material instanceof THREE.MeshStandardMaterial) {
-        obj.material.color.set(color);
-      }
-    });
-  }
-  
-  /**
-   * Obtient la couleur actuelle
-   */
-  getCurrentColor(): Observable<string> {
-    return this.currentColor.asObservable();
-  }
-
-  /**
-   * Gère le redimensionnement de la fenêtre
-   */
-  onResize() {
-    if (!this.backgroundRenderer || !this.backgroundCamera) return;
-    
-    this.backgroundCamera.aspect = window.innerWidth / window.innerHeight;
-    this.backgroundCamera.updateProjectionMatrix();
-    this.backgroundRenderer.setSize(window.innerWidth, window.innerHeight);
-  }
-
-  /**
-   * Définit le mode basse qualité
-   * @param enabled Activer ou non le mode basse qualité
-   */
-  setLowQualityMode(enabled: boolean) {
-    this.lowQualityMode = enabled;
-    
-    if (this.backgroundRenderer) {
-      this.backgroundRenderer.setPixelRatio(enabled ? 1.0 : Math.min(1.5, window.devicePixelRatio));
-      this.backgroundRenderer.shadowMap.type = enabled ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
-    }
-    
-    // Gérer la visibilité des objets de fond
-    if (this.backgroundObjects.length > 5) {
-      for (let i = 5; i < this.backgroundObjects.length; i++) {
-        this.backgroundObjects[i].visible = !enabled;
-      }
-    }
-  }
-  /**
-   * Boucle d'animation principale
-   */
-  private animate() {
-    if (!this.backgroundRenderer || !this.backgroundScene || !this.backgroundCamera) return;
-
-    // Utiliser le service d'animation pour gérer la boucle d'animation
-    this.animationFrameId = this.animationService.startAnimationLoop(
-      (time: number, delta: number) => {
-        const elapsedTime = this.clock.getElapsedTime();
-        
-        // Animation de base des objets
-        this.animateBackgroundObjects(elapsedTime, delta);
-        
-        // Rendu de la scène
-        this.backgroundRenderer.render(this.backgroundScene, this.backgroundCamera);
-      },
-      this.lowQualityMode ? 24 : 30
-    );
-  }
-  
-  /**
-   * Anime les objets de fond
-   */
-  private animateBackgroundObjects(time: number, delta: number) {
-    const scrollY = this.scrollPosition.getValue();
-    const scrollFactor = scrollY * 0.001;
-    
-    // Animation simple des objets de fond
-    this.backgroundObjects.forEach((obj, index) => {
-      // Rotation continue
-      obj.rotation.x += 0.001 * (index % 2 ? 1 : -1);
-      obj.rotation.z += 0.001 * (index % 3 ? 1 : -1);
-      
-      // Mouvement simple basé sur le temps
-      const offset = index * 0.1;
-      const animationSpeed = 0.005;
-      
-      obj.position.y = Math.sin(time * 0.3 + offset) * 0.3;
-      obj.position.x = Math.cos(time * 0.3 + offset) * 0.3;
-    });
-    
-    // Animation simple de la lumière
-    if (this.light) {
-      this.light.position.x = Math.sin(time * 0.2) * 3;
-      this.light.position.y = 1 + Math.cos(time * 0.15) * 1;
-    }
-  }
-  /**
-   * Nettoie les ressources pour éviter les fuites de mémoire
-   */
   dispose() {
-    if (this.animationFrameId !== null) {
-      this.animationService.stopAnimationLoop(this.animationFrameId);
-      this.animationFrameId = null;
+    if (this.animationId !== null) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
     }
-    
-    if (this.backgroundScene) {
-      this.commonService.disposeScene(this.backgroundScene);
-    }
-    
-    if (this.backgroundRenderer) {
-      this.backgroundRenderer.dispose();
-    }
+    if (this.renderer) this.renderer.dispose();
+    Object.values(this.models).forEach(model => this.scene.remove(model));
+    this.models = {};
   }
 }

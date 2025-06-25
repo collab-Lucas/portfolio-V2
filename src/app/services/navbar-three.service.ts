@@ -65,6 +65,19 @@ export class NavbarThreeService implements OnDestroy {
   /**
    * Initialise la scène Three.js pour la navbar
    */  initNavbar(canvas: HTMLCanvasElement) {
+    console.log('initNavbar appelé avec canvas:', canvas);
+    
+    if (!canvas) {
+      console.error('Canvas non disponible pour initNavbar');
+      return;
+    }
+    
+    // Arrêter toute animation précédente
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    
     // Utiliser setupScene du CommonThreeService
     this.navbarScene = this.commonService.setupScene();
     this.navbarScene.background = null;
@@ -76,13 +89,15 @@ export class NavbarThreeService implements OnDestroy {
       alpha: true,
       antialias: !this.lowQualityMode,
       precision: this.lowQualityMode ? 'lowp' : 'mediump',
-      powerPreference: 'low-power',
+      powerPreference: 'high-performance', // Changé pour améliorer les performances
       shadowMapEnabled: true,
       shadowMapType: THREE.PCFSoftShadowMap
     });
+    
     this.navbarRenderer.setSize(window.innerWidth, CANVAS_HEIGHT);
     this.navbarRenderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.navbarRenderer.toneMappingExposure = 1;
+    this.navbarRenderer.setClearColor(0x000000, 0); // Fond transparent
     
     // Utiliser setupCamera du CommonThreeService
     this.navbarCamera = this.commonService.setupCamera({
@@ -135,9 +150,13 @@ export class NavbarThreeService implements OnDestroy {
 
   /**
    * Charge les modèles de la navbar
-   */
-  private loadNavbarModels() {
+   */  private loadNavbarModels() {
+    // Ajout d'un gestionnaire d'erreurs global pour THREE.js
+    THREE.Cache.enabled = true; // Active le cache pour les textures
+    
     const loader = new GLTFLoader();
+    
+    console.log('Chargement des modèles de la navbar');
       
     // Load navbar_ico
     loader.load(
@@ -300,57 +319,65 @@ export class NavbarThreeService implements OnDestroy {
       return;
     }
     
-    // Utiliser le service d'animation pour gérer la boucle d'animation avec une méthode simplifiée
-    const stopAnimation = this.animationService.startSimpleAnimationLoop((time: number) => {
-      const delta = this.clock.getDelta();
-        // Mettre à jour la rotation de la scène
-        this.currentRotationX += (this.targetRotationX - this.currentRotationX) * 0.03;
-        this.currentRotationY += (this.targetRotationY - this.currentRotationY) * 0.03;
-        
-        const isLarge = this.navbarElement && !this.navbarElement.classList.contains('shrink-navbar');
-        const currentTime = performance.now();
-        
-        // Mettre à jour régulièrement les ombres
-        const shadowUpdateInterval = this.lowQualityMode ? 5000 : 2000;
-        if (currentTime - this.lastShadowUpdate > shadowUpdateInterval) {
-          this.forceUpdateShadows();
-          
-          // Chercher et optimiser le torus si nécessaire
-          if (!this.torusShadowsOptimized && currentTime > 5000) {
-            this.optimizeLightsForTorusShadows();
-            this.torusShadowsOptimized = true;
-          }
-          
-          this.lastShadowUpdate = currentTime;
-        }
-
-        if (isLarge) {
-          const timeSec = currentTime * 0.001;
-          this.navbarScene.rotation.x = this.currentRotationX;
-          this.navbarScene.rotation.y = this.currentRotationY;
-          this.navbarScene.position.y = Math.sin(timeSec * 0.3) * 0.1;
-          
-          if (this.navbarRenderer.shadowMap.enabled !== true) {
-            this.navbarRenderer.shadowMap.enabled = true;
-            this.forceUpdateShadows();
-          }
-        } else {
-          this.navbarScene.position.y = THREE.MathUtils.lerp(this.navbarScene.position.y, 0, 0.05);
-          this.navbarScene.rotation.x = THREE.MathUtils.lerp(this.navbarScene.rotation.x, 0, 0.05);
-          this.navbarScene.rotation.y = THREE.MathUtils.lerp(this.navbarScene.rotation.y, 0, 0.05);
-          
-          if (this.navbarRenderer.shadowMap.enabled !== true) {
-            this.navbarRenderer.shadowMap.enabled = true;
-          }        }
-
-        this.navbarRenderer.render(this.navbarScene, this.navbarCamera);
-      });
+    // Utiliser notre propre boucle d'animation (plus fiable)
+    const animateFrame = () => {
+      if (this.animationFrameId === null) return; // Animation a été arrêtée
       
-      // Stocker la référence pour pouvoir arrêter l'animation plus tard
-      if (this.animationFrameId !== null) {
-        this.animationService.stopAnimationLoop(this.animationFrameId);
+      this.animationFrameId = requestAnimationFrame(animateFrame);
+      const delta = this.clock.getDelta();
+      
+      // Mettre à jour tous les mixers d'animation
+      this.mixers.forEach(mixer => mixer.update(delta));
+        
+      // Mettre à jour la rotation de la scène
+      this.currentRotationX += (this.targetRotationX - this.currentRotationX) * 0.03;
+      this.currentRotationY += (this.targetRotationY - this.currentRotationY) * 0.03;
+      
+      const isLarge = this.navbarElement && !this.navbarElement.classList.contains('shrink-navbar');
+      const currentTime = performance.now();
+      
+      // Mettre à jour régulièrement les ombres
+      const shadowUpdateInterval = this.lowQualityMode ? 5000 : 2000;
+      if (currentTime - this.lastShadowUpdate > shadowUpdateInterval) {
+        this.forceUpdateShadows();
+        
+        // Chercher et optimiser le torus si nécessaire
+        if (!this.torusShadowsOptimized && currentTime > 5000) {
+          this.optimizeLightsForTorusShadows();
+          this.torusShadowsOptimized = true;
+        }
+        
+        this.lastShadowUpdate = currentTime;
       }
-      this.animationFrameId = -1; // Marquer comme actif mais géré par le service d'animation
+
+      if (isLarge) {
+        const timeSec = currentTime * 0.001;
+        this.navbarScene.rotation.x = this.currentRotationX;
+        this.navbarScene.rotation.y = this.currentRotationY;
+        this.navbarScene.position.y = Math.sin(timeSec * 0.3) * 0.1;
+        
+        if (this.navbarRenderer.shadowMap.enabled !== true) {
+          this.navbarRenderer.shadowMap.enabled = true;
+          this.forceUpdateShadows();
+        }      } else {
+        // Quand la navbar est repliée, positionner la scène légèrement plus haut pour éviter l'écart
+        this.navbarScene.position.y = THREE.MathUtils.lerp(this.navbarScene.position.y, 1.0, 0.05);
+        this.navbarScene.rotation.x = THREE.MathUtils.lerp(this.navbarScene.rotation.x, 0, 0.05);
+        this.navbarScene.rotation.y = THREE.MathUtils.lerp(this.navbarScene.rotation.y, 0, 0.05);
+        
+        if (this.navbarRenderer.shadowMap.enabled !== true) {
+          this.navbarRenderer.shadowMap.enabled = true;
+        }        
+      }
+
+      this.navbarRenderer.render(this.navbarScene, this.navbarCamera);
+    };
+    
+    // Démarrer la boucle d'animation
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
+    this.animationFrameId = requestAnimationFrame(animateFrame);
   }
 
   /**
@@ -473,27 +500,50 @@ export class NavbarThreeService implements OnDestroy {
   getCurrentColor(): Observable<string> {
     return this.currentColor.asObservable();
   }
-
   /**
    * Vérifier si tous les modèles sont chargés et démarrer les animations
    */
   private checkAndStartAnimations(): void {
-    if (this.modelLoadingStatus.ico && this.modelLoadingStatus.torus) {
+    const allModelsLoaded = this.modelLoadingStatus.ico && 
+                           this.modelLoadingStatus.torus && 
+                           this.modelLoadingStatus.scene;
+    
+    if (allModelsLoaded) {
       console.log('Tous les modèles sont chargés, démarrage des animations synchronisées');
       
-      this.animationActions.forEach(action => {
-        action.reset();
-        action.play();
-      });
+      // Attendre un peu pour s'assurer que tout est bien initialisé
+      setTimeout(() => {
+        // Réinitialiser et jouer toutes les animations
+        this.animationActions.forEach(action => {
+          action.reset();
+          action.setLoop(THREE.LoopRepeat, Infinity);
+          action.clampWhenFinished = false;
+          action.play();
+        });
+        
+        // S'assurer que l'animation est bien démarrée
+        if (this.animationFrameId === null) {
+          this.animate();
+        }
+        
+        // Forcer une mise à jour des ombres
+        this.forceUpdateShadows();
+      }, 200);
     }
   }
   /**
    * Nettoie les ressources
    */  dispose() {
-    if (this.animationFrameId !== null && this.animationFrameId !== -1) {
-      this.animationService.stopAnimationLoop(this.animationFrameId);
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
+    
+    // Arrêter tous les mixers d'animation
+    for (const mixer of this.mixers) {
+      mixer.stopAllAction();
+    }
+    this.mixers = [];
     
     // Nettoyer la scène et les ressources
     if (this.navbarScene) {
@@ -515,5 +565,23 @@ export class NavbarThreeService implements OnDestroy {
    */
   ngOnDestroy() {
     this.dispose();
+  }
+
+  /**
+   * Ajuste la position de la caméra en fonction de l'état de la navbar
+   * @param isShrunk True si la navbar est repliée, false sinon
+   */
+  adjustCameraForNavbarState(isShrunk: boolean): void {
+    if (!this.navbarCamera) return;
+    
+    if (isShrunk) {
+      // Quand la navbar est repliée, positionner la caméra pour éviter l'écart
+      this.navbarCamera.position.y = 2.0; // Position plus élevée pour compenser l'écart
+    } else {
+      // En mode large, position standard
+      this.navbarCamera.position.y = 0;
+    }
+    
+    this.navbarCamera.updateProjectionMatrix();
   }
 }
