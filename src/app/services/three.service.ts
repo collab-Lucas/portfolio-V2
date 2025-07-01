@@ -32,7 +32,12 @@ export class ThreeService {
    * Initialise la scène d'arrière-plan
    */
   initBackground(canvas: HTMLCanvasElement) {
-
+    console.log('ThreeService: initBackground appelé');
+    if (canvas) {
+      this.backgroundService.init(canvas);
+    } else {
+      console.error('ThreeService: Tentative d\'initialiser le background avec un canvas null');
+    }
   }
 
   /**
@@ -60,8 +65,14 @@ export class ThreeService {
    * Gère le redimensionnement de la fenêtre
    */
   onResize() {
+    console.log('ThreeService: onResize appelé');
+    // Redimensionner à la fois la navbar et le background
     this.navbarService.onResize();
-
+    
+    // Appeler notre nouvelle méthode onResize sur le BackgroundThreeService
+    if (this.backgroundService) {
+      this.backgroundService.onResize();
+    }
   }
 
   /**
