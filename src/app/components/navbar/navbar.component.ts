@@ -168,7 +168,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
     }
 
     .shrink-navbar .navbar-canvas {
-      transform: translateY(calc(-92vh + 2px ));
+      transform: translateY(calc(-100vh + 60px ));
       filter: brightness(0.8);
     }
 
