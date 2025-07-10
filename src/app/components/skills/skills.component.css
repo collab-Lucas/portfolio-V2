@@ -6,9 +6,9 @@
 
 /* Styles pour les sections avec un design amélioré */
 .skills-section {
-  min-height: 100vh;
-  padding-top: 120px;
-  margin-top: 200px;
+  min-height: 1400px;
+  padding-top: 180px;
+  margin-top: 300px;
 }
 
 .skill-category {

@@ -1,6 +1,8 @@
 .intro-section {
-  padding-top:-10px;
-  margin-top: -10px;
+  position: absolute;
+  top: calc(50vh); /* Centrer avec ajustement */
+  transform: translate(-50%,-50%);
+  left: 50%;
 }
 
 .card {
@@ -10,12 +12,20 @@
 }
 
 /* Nouvelles classes pour remplacer les styles inline */
-.full-height-section {
-  height: 100vh;
+.full-height-section-intro {
+  height: 700px;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
+.full-height-section{
+  height: 1000px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+
 
 .card-intro {
   background: rgba(0,0,0,0.36);
@@ -72,27 +82,25 @@
 }
 
 
-/* Garde la carte transparente comme avant */
 .card-intro {
-  background-color: rgba(0, 0, 0, 0.5); /* Garde la transparence actuelle */
+  background-color: rgba(0, 0, 0, 0.5); 
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
 
-/* Rend le texte plus visible */
 .card-title-custom {
   text-align: center;
   font-size: 32px;
   font-weight: bold;
   margin-bottom: 22px;
-  color: rgba(255, 255, 255, 1); /* Texte blanc opaque */
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); /* Ombre légère pour améliorer la lisibilité */
+  color: rgba(255, 255, 255, 1); 
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); 
 }
 
 .card-text-custom {
   font-size: 28px;
-  color: rgba(255, 255, 255, 0.95); /* Texte blanc presque opaque */
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); /* Ombre légère pour améliorer la lisibilité */
-  font-weight: 400; /* Un peu plus épais pour une meilleure lisibilité */
+  color: rgba(255, 255, 255, 0.95); 
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); 
+  font-weight: 400; 
 }
