@@ -54,6 +54,7 @@ export class NavbarThreeService implements OnDestroy {
   private torusShadowsOptimized = false;
   
   private animationFrameId: number | null = null;
+  private customMaterials: (THREE.MeshStandardMaterial | THREE.MeshBasicMaterial)[] = [];
   constructor(
     private commonService: CommonThreeService,
     private lightService: LightService,
@@ -290,6 +291,271 @@ export class NavbarThreeService implements OnDestroy {
         this.modelLoadingStatus.scene = true;
       }
     );
+    setTimeout(() => {
+      console.log("Application du matériau de test simple...");
+      
+      // Ajouter une sphère de test TRÈS SIMPLE
+      const testGeometry = new THREE.SphereGeometry(1, 32, 32);
+      const testMaterial = new THREE.MeshStandardMaterial({
+        color: 0x00ff00, // Vert vif
+        roughness: 0.5,
+        metalness: 0.1
+      });
+      
+      const testMesh = new THREE.Mesh(testGeometry, testMaterial);
+      testMesh.position.set(3, 0, 0); // Positionner clairement visible
+      testMesh.castShadow = true;
+      testMesh.receiveShadow = true;
+      this.navbarScene.add(testMesh);
+      
+      console.log("Sphère verte de test ajoutée");
+      
+      // Créer une deuxième sphère avec shader TRÈS SIMPLE
+      const shaderGeometry = new THREE.SphereGeometry(1, 32, 32);
+      const shaderMaterial = new THREE.MeshStandardMaterial({
+        color: 0xff0000, // Rouge de base
+        roughness: 0.5,
+        metalness: 0.1
+      });
+      
+      // Shader ultra-simple qui change juste la couleur
+      shaderMaterial.onBeforeCompile = (shader: any) => {
+        shader.uniforms.time = { value: 0 };
+        shaderMaterial.userData = shaderMaterial.userData || {};
+        shaderMaterial.userData['shader'] = shader;
+
+        // Remplacer seulement la couleur finale
+        shader.fragmentShader = shader.fragmentShader.replace(
+          'gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
+          `
+          // Test simple : changer la couleur avec le temps
+          float timeColor = sin(time) * 0.5 + 0.5;
+          vec3 testColor = mix(vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 1.0), timeColor);
+          gl_FragColor = vec4( outgoingLight * testColor, diffuseColor.a );
+          `
+        );
+        
+        // Ajouter l'uniform time
+        shader.uniforms.time = { value: 0 };
+      };
+      
+      const shaderMesh = new THREE.Mesh(shaderGeometry, shaderMaterial);
+      shaderMesh.position.set(-3, 0, 0); // Positionner de l'autre côté
+      shaderMesh.castShadow = true;
+      shaderMesh.receiveShadow = true;
+      this.navbarScene.add(shaderMesh);
+      
+      console.log("Sphère avec shader simple ajoutée");
+      
+      // Maintenant appliquer des matériaux bicouches aux objets de la navbar
+      const debugMaterials: {name: string, oldMaterial: string, color: string}[] = [];
+      
+      this.navbarScene.traverse((child: THREE.Object3D) => {
+        if (
+          child instanceof THREE.Mesh &&
+          child !== testMesh &&
+          child !== shaderMesh &&
+          // Exclure TOUTES les sphères d'environnement (très grandes)
+          !(child.geometry instanceof THREE.SphereGeometry && 
+            child.geometry.parameters?.radius >= 1000) &&
+          // Exclure toutes les sphères avec ShaderMaterial
+          !(child.material instanceof THREE.ShaderMaterial) &&
+          // Exclure les écrans/moniteurs
+          !(child.name && (child.name.includes('screen') || child.name.includes('monitor') || child.name.includes('display')))
+        ) {
+          // Enregistrer l'ancien matériau pour débogage
+          debugMaterials.push({
+            name: child.name || 'unnamed',
+            oldMaterial: child.material ? child.material.type : 'undefined',
+            color: child.material && (child.material as any).color ? (child.material as any).color.getHexString() : 'no color'
+          });
+          
+          child.castShadow = true;
+          child.receiveShadow = true;
+          
+          // === COUCHE 1: MATÉRIAU DE BASE (réagit à la lumière) ===
+          const originalColor = child.material && (child.material as any).color ? 
+            (child.material as any).color : new THREE.Color(0xffffff);
+          
+          const baseMaterial = new THREE.MeshStandardMaterial({
+            color: originalColor,
+            roughness: 0.5,
+            metalness: 0.3,
+            transparent: false
+          });
+          
+          // Appliquer le matériau de base
+          child.material = baseMaterial;
+          this.customMaterials.push(baseMaterial);
+          
+          // === COUCHE 2: MATÉRIAU OVERLAY (veines uniquement) ===
+          // Créer une géométrie légèrement plus grande pour éviter le z-fighting
+          const overlayGeometry = child.geometry.clone();
+          overlayGeometry.scale(1.002, 1.002, 1.002);
+          
+          const overlayMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 1.0,
+            alphaTest: 0.1, // Important pour ne pas afficher les parties transparentes
+            side: THREE.DoubleSide,
+            blending: THREE.NormalBlending
+          });
+          
+          // Shader pour les veines avec le shader fourni
+          overlayMaterial.onBeforeCompile = (shader: any) => {
+            // Stocker la référence au shader
+            overlayMaterial.userData = overlayMaterial.userData || {};
+            overlayMaterial.userData['shader'] = shader;
+            
+            // Ajouter les uniforms
+            shader.uniforms.time = { value: 0 };
+            
+            // Remplacer complètement le vertex shader
+            shader.vertexShader = `
+              varying vec3 vWorldPosition;
+              varying vec3 vNormal;
+              varying vec3 vViewPosition;
+              varying vec2 vUv;
+
+              #include <common>
+              #include <lights_pars_begin>
+
+              void main() {
+                vUv = uv;
+                vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+                vNormal = normalize(normalMatrix * normal);
+                
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                vViewPosition = -mvPosition.xyz;
+                
+                gl_Position = projectionMatrix * mvPosition;
+              }
+            `;
+            
+            // Remplacer complètement le fragment shader
+            shader.fragmentShader = `
+              uniform float time;
+              varying vec3 vWorldPosition;
+              varying vec3 vNormal;
+
+              // === Simplex Noise ===
+              vec3 permute(vec3 x) {
+                return mod(((x * 34.0) + 1.0) * x, 289.0);
+              }
+              float snoise(vec2 v) {
+                const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                                    -0.577350269189626, 0.024390243902439);
+                vec2 i = floor(v + dot(v, C.yy));
+                vec2 x0 = v - i + dot(i, C.xx);
+                vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                vec4 x12 = x0.xyxy + C.xxzz;
+                x12.xy -= i1;
+                i = mod(i, 289.0);
+                vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) +
+                                 i.x + vec3(0.0, i1.x, 1.0));
+                vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+                m = m * m;
+                m = m * m;
+                vec3 x = 2.0 * fract(p * C.www) - 1.0;
+                vec3 h = abs(x) - 0.5;
+                vec3 ox = floor(x + 0.5);
+                vec3 a0 = x - ox;
+                m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+                vec3 g;
+                g.x  = a0.x * x0.x + h.x * x0.y;
+                g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+                return 130.0 * dot(m, g);
+              }
+
+              // Dégradé coloré léger
+              vec3 getColor(float t) {
+                return vec3(0.8 + 0.2 * sin(t * 6.283 + 0.0),
+                            0.8 + 0.2 * sin(t * 6.283 + 2.0),
+                            0.8 + 0.2 * sin(t * 6.283 + 4.0));
+              }
+
+              void main() {
+                vec3 normalizedPos = normalize(vWorldPosition);
+                vec2 uv;
+                vec3 absNormal = abs(vNormal);
+                
+                if (absNormal.x > absNormal.y && absNormal.x > absNormal.z) {
+                  // Face X : utiliser Y et Z
+                  uv = vWorldPosition.yz * 0.1;
+                } else if (absNormal.y > absNormal.z) {
+                  // Face Y : utiliser X et Z  
+                  uv = vWorldPosition.xz * 0.1;
+                } else {
+                  // Face Z : utiliser X et Y avec la même échelle
+                  uv = vWorldPosition.xy * 0.1;
+                }
+
+                // Première couche de noise
+                float noise1 = snoise(uv + vec2(time * 0.05, 1.0));
+
+                // Seconde couche de noise, plus petite échelle et déplacement
+                float noise2 = snoise(uv * 1.5 + vec2(0.0, time * 0.03));
+
+                // Combinaison : produit une sorte de lignes de turbulence croisées
+                float combined = abs(noise1*1.3 - noise2 * 0.5);
+
+                // Amplifie la séparation et réduit l'épaisseur des veines
+                float veins = 1.0 - smoothstep(0.2, 0.3, combined);
+
+                // Couleur de la veine (dégradé cyclique)
+                float t = fract(uv.x + time * 0.1);
+                vec3 veinColor = getColor(t);
+
+                // Couleur de base pierre avec variation subtile
+                vec3 stoneColor = vec3(0.9 + 0.1 * snoise(uv * 0.5));
+
+                // Effet de contour basé sur la normale pour faire ressortir les formes
+                float edgeFactor = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
+                edgeFactor = smoothstep(0.3, 0.7, edgeFactor) * 0.1;
+                
+                // Assombrir les bords pour donner du volume
+                stoneColor = mix(stoneColor, vec3(0.6), edgeFactor);
+
+                // Pour l'overlay, on ne veut que les veines, pas la pierre
+                // Donc on utilise les veines comme alpha et on garde la couleur des veines
+                vec3 finalColor = veinColor;
+                float alpha = veins * 0.8; // Intensité des veines comme alpha
+                
+                // Discard les pixels trop transparents
+                if (alpha < 0.01) {
+                  discard;
+                }
+                
+                gl_FragColor = vec4(finalColor, alpha);
+              }
+            `;
+          };
+          
+          // Créer le mesh overlay
+          const overlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial);
+          overlayMesh.position.copy(child.position);
+          overlayMesh.rotation.copy(child.rotation);
+          overlayMesh.scale.copy(child.scale);
+          overlayMesh.castShadow = false; // Les veines ne projettent pas d'ombres
+          overlayMesh.receiveShadow = false;
+          
+          // Ajouter l'overlay au même parent que l'objet original
+          if (child.parent) {
+            child.parent.add(overlayMesh);
+          } else {
+            this.navbarScene.add(overlayMesh);
+          }
+          
+          // Ajouter à la liste des matériaux personnalisés
+          this.customMaterials.push(overlayMaterial);
+          
+          console.log(`✓ Matériau bicouche appliqué à: ${child.name}`);
+        }
+      });
+      
+      console.log("Matériaux standards appliqués:", debugMaterials);
+    }, 500);
   }
   
   /**
@@ -350,6 +616,9 @@ export class NavbarThreeService implements OnDestroy {
         this.lastShadowUpdate = currentTime;
       }
 
+      // Mettre à jour les uniforms des shaders
+      this.updateShaderUniforms();
+
       if (isLarge) {
         const timeSec = currentTime * 0.001;
         this.navbarScene.rotation.x = this.currentRotationX;
@@ -408,6 +677,65 @@ export class NavbarThreeService implements OnDestroy {
       this.navbarCamera.updateProjectionMatrix();
       this.navbarRenderer.setSize(width, height);
     });
+  }
+
+  /**
+   * Met à jour les uniforms des shaders
+   */
+  private updateShaderUniforms(): void {
+    if (!this.navbarScene) return;
+
+    const currentTime = performance.now() * 0.001;
+    
+    this.navbarScene.traverse((child: THREE.Object3D) => {
+      if (child instanceof THREE.Mesh) {
+        // Pour les ShaderMaterial classiques
+        if (child.material instanceof THREE.ShaderMaterial) {
+          if (child.material.uniforms && child.material.uniforms['time']) {
+            child.material.uniforms['time'].value = currentTime;
+          }
+        }
+        // Pour les MeshStandardMaterial et MeshBasicMaterial avec onBeforeCompile
+        else if ((child.material instanceof THREE.MeshStandardMaterial || 
+                  child.material instanceof THREE.MeshBasicMaterial) && 
+                 child.material.userData && 
+                 child.material.userData['shader']) {
+          const shader = child.material.userData['shader'];
+          if (shader.uniforms) {
+            // Mettre à jour l'uniform time pour tous les shaders
+            if (shader.uniforms['time']) {
+              shader.uniforms['time'].value = currentTime;
+            }
+            
+            // Garder les anciens uniforms pour compatibilité avec d'autres shaders
+            if (shader.uniforms['noiseScale']) {
+              shader.uniforms['noiseScale'].value = 3.0 + Math.sin(currentTime * 0.2) * 0.5;
+            }
+            
+            if (shader.uniforms['waveSpeed']) {
+              shader.uniforms['waveSpeed'].value = 0.5 + Math.sin(currentTime * 0.3) * 0.2;
+            }
+            
+            if (shader.uniforms['colorIntensity']) {
+              shader.uniforms['colorIntensity'].value = 0.3 + Math.sin(currentTime * 0.4) * 0.2;
+            }
+            
+            if (shader.uniforms['veinIntensity']) {
+              shader.uniforms['veinIntensity'].value = 0.8 + Math.sin(currentTime * 0.4) * 0.3;
+            }
+            
+            if (shader.uniforms['veinThickness']) {
+              shader.uniforms['veinThickness'].value = 0.1 + Math.sin(currentTime * 0.5) * 0.05;
+            }
+          }
+        }
+      }
+    });
+    
+    // Debug moins fréquent
+    if (Math.floor(currentTime) % 10 === 0 && Math.floor(currentTime * 10) % 10 === 0) {
+      console.log('Bicouche shaders updated:', currentTime);
+    }
   }
 
   /**
@@ -584,4 +912,5 @@ export class NavbarThreeService implements OnDestroy {
     
     this.navbarCamera.updateProjectionMatrix();
   }
+
 }

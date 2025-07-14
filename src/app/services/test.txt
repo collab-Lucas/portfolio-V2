@@ -1,0 +1,115 @@
+  private applyShaderMaterialToScene(): void {
+    if (!this.navbarScene) {
+      console.error('Navbar scene is not initialized');
+      return;
+    }
+
+    const vertexShader = `
+    varying vec3 vWorldPosition;
+    varying vec3 vNormal;
+    varying vec2 vUv;
+    
+    void main() {
+      vUv = uv;
+      vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+    `;
+
+    const fragmentShader = `
+    uniform float time;
+    varying vec3 vWorldPosition;
+    varying vec3 vNormal;
+    varying vec2 vUv;
+    
+    vec3 permute(vec3 x) {
+      return mod(((x * 34.0) + 1.0) * x, 289.0);
+    }
+    
+    float snoise(vec2 v) {
+      const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                          -0.577350269189626, 0.024390243902439);
+      vec2 i = floor(v + dot(v, C.yy));
+      vec2 x0 = v - i + dot(i, C.xx);
+      vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+      vec4 x12 = x0.xyxy + C.xxzz;
+      x12.xy -= i1;
+      i = mod(i, 289.0);
+      vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) +
+                       i.x + vec3(0.0, i1.x, 1.0));
+      vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+      m = m * m;
+      m = m * m;
+      vec3 x = 2.0 * fract(p * C.www) - 1.0;
+      vec3 h = abs(x) - 0.5;
+      vec3 ox = floor(x + 0.5);
+      vec3 a0 = x - ox;
+      m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+      vec3 g;
+      g.x  = a0.x * x0.x + h.x * x0.y;
+      g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+      return 130.0 * dot(m, g);
+    }
+    
+    vec3 getColor(float t) {
+      return vec3(0.8 + 0.2 * sin(t * 6.283 + 0.0),
+                  0.8 + 0.2 * sin(t * 6.283 + 2.0),
+                  0.8 + 0.2 * sin(t * 6.283 + 4.0));
+    }
+    
+    void main() {
+      // Projection triplanaire
+      vec3 absNormal = abs(normalize(vNormal));
+      float maxNormal = max(max(absNormal.x, absNormal.y), absNormal.z);
+      
+      // Échelle de coordonnées pour chaque plan
+      float scale = 0.2;
+      
+      // Déterminer quel plan domine
+      vec2 uv;
+      if (absNormal.x > absNormal.y && absNormal.x > absNormal.z) {
+        // Face X
+        uv = vWorldPosition.yz * scale;
+      } else if (absNormal.y > absNormal.z) {
+        // Face Y
+        uv = vWorldPosition.xz * scale;
+      } else {
+        // Face Z
+        uv = vWorldPosition.xy * scale;
+      }
+      
+      // Animation temporelle
+      float timeOffset = time * 0.1;
+      
+      // Premier bruit de Perlin (grandes caractéristiques)
+      float noise1 = snoise(uv + vec2(timeOffset, 0.0));
+      
+      // Second bruit de Perlin (détails plus fins)
+      float noise2 = snoise(uv * 2.5 + vec2(-timeOffset * 0.5, timeOffset));
+      
+      // Combiner les deux bruits pour créer un effet de marbre/veine
+      float combined = abs(noise1 * 1.5 - noise2 * 0.8);
+      float veins = 1.0 - smoothstep(0.1, 0.3, combined);
+      
+      // Couleur changeante pour les veines
+      float colorPhase = fract(vUv.x + vUv.y + timeOffset);
+      vec3 veinColor = getColor(colorPhase);
+      
+      // Couleur de base avec légère variation de texture
+      vec3 baseColor = vec3(0.85 + 0.15 * snoise(uv * 3.0));
+      
+      // Assombrissement sur les bords pour donner du volume
+      float edgeFactor = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.0) * 0.3;
+      baseColor = mix(baseColor, vec3(0.6, 0.6, 0.7), edgeFactor);
+      
+      // Mélange final entre couleur de base et veines
+      vec3 finalColor = mix(baseColor, veinColor, veins * 0.7);
+      
+      // Appliquer un léger effet d'illumination basique
+      float light = max(dot(normalize(vNormal), normalize(vec3(1.0, 1.0, 1.0))), 0.0);
+      finalColor *= (0.7 + light * 0.4);
+      
+      gl_FragColor = vec4(finalColor, 1.0);
+    }
+    `;

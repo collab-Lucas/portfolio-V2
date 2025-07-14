@@ -1257,6 +1257,8 @@ import { trigger, transition, style, animate } from '@angular/animations';
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   @ViewChild('threeNavbarCanvas') navbarCanvas!: ElementRef<HTMLCanvasElement>;
+
+  
     isLightControlsOpen = false;
   currentColor$: Observable<string>;
   lights: SimpleLight[] = []; // Utiliser SimpleLight au lieu de any[]
@@ -1269,10 +1271,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
   pointLightIntensity = 0.3;
   backgroundLightIntensity = 0.5;
 
-  ambientLightColor = '#ffffff';
-  directionalLightColor = '#ffffff';
-  pointLightColor = '#ffffff';
-  backgroundLightColor = '#ffffff';
+  // Couleurs pastel harmonieuses pour la navbar
+  ambientLightColor = '#aee7fa';         // Bleu pastel
+  directionalLightColor = '#f7c6e0';     // Rose pastel
+  pointLightColor = '#fff6b7';           // Jaune pastel
+  backgroundLightColor = '#c6f7e2';      // Vert pastel
 
   colorOptions: any[];  cvAvailable = false;
   isShrunk$: Observable<boolean>;
@@ -1312,7 +1315,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Ajouter l'écouteur de mouvement de la souris
-    window.addEventListener('mousemove', this.handleMouseMove.bind(this));    // S'abonner aux changements d'état de la navbar
+    window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    
+    // S'abonner aux changements d'état de la navbar AVANT de restaurer l'état
     this.subscriptions.push(
       this.navbarEffects.isShrunk$.subscribe(isShrunk => {
         this.currentShrinkState = isShrunk; // Mettre à jour le cache
@@ -1321,6 +1326,23 @@ export class NavbarComponent implements OnInit, OnDestroy {
         }
       })
     );
+    
+    // Restaurer l'état de la navbar depuis localStorage APRÈS la souscription
+    const savedState = localStorage.getItem('navbarState');
+    if (savedState) {
+      const savedShrinkState = JSON.parse(savedState);
+      console.log('Restauration état navbar:', savedShrinkState);
+      // Appliquer l'état sauvegardé au service NavbarEffects
+      setTimeout(() => {
+        this.navbarEffects.setNavbarState(savedShrinkState);
+      }, 100);
+    } else {
+      // Si aucun état sauvegardé, utiliser l'état par défaut (navbar rétractée)
+      console.log('Aucun état sauvegardé, utilisation de l\'état par défaut');
+      setTimeout(() => {
+        this.navbarEffects.setNavbarState(true);
+      }, 100);
+    }
   }
   ngAfterViewInit() {
     setTimeout(() => {
@@ -1419,6 +1441,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     // Si la navbar est grande, la réduire
     if (wasExpanded) {
       this.navbarEffects.setNavbarState(true);
+      localStorage.setItem('navbarState', JSON.stringify(true));
     }
     
     // Navigation vers la section avec un délai optimisé
@@ -1531,8 +1554,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
     if (this.isLightControlsOpen) {
       this.updateLightsList();
       this.navbarEffects.setNavbarState(false);  // Expand navbar
+      localStorage.setItem('navbarState', JSON.stringify(false));
     } else {
       this.navbarEffects.setNavbarState(true);   // Shrink navbar
+      localStorage.setItem('navbarState', JSON.stringify(true));
     }
   }
   updateLightsList() {
@@ -1713,15 +1738,22 @@ export class NavbarComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Faire le toggle seulement si aucun élément bloquant n'est cliqué
+    // Faire le toggle et obtenir le nouvel état
     console.log('Toggle navbar - état actuel:', this.currentShrinkState);
     this.navbarEffects.toggleNavbar();
+    
+    // Attendre que le toggle soit effectué pour sauvegarder le nouvel état
+    setTimeout(() => {
+      const newState = this.currentShrinkState;
+      console.log('Sauvegarde nouvel état:', newState);
+      localStorage.setItem('navbarState', JSON.stringify(newState));
+    }, 50);
     
     // Force la mise à jour de Three.js pour qu'elle s'adapte au nouvel état
     setTimeout(() => {
       this.threeService.onResize();
       // Réinitialiser les positions de la scène pour animations
       this.threeService.updateMousePosition(0, 0);
-    }, 50);
+    }, 100);
   }
 }

@@ -1,5 +1,5 @@
 import { Component, ElementRef, ViewChild, OnDestroy } from '@angular/core';
-import { ThreeService } from '../../services/three.service';
+import { BackgroundThreeService } from '../../services/background-three.service';
 
 @Component({
   selector: 'app-background',
@@ -10,20 +10,19 @@ import { ThreeService } from '../../services/three.service';
 export class BackgroundComponent implements OnDestroy {
   @ViewChild('threeBackgroundCanvas') backgroundCanvas!: ElementRef<HTMLCanvasElement>;
 
-  constructor(private threeService: ThreeService) {}
+  constructor(private backgroundThreeService: BackgroundThreeService) {}
 
   ngAfterViewInit() {
-    this.threeService.initBackground(this.backgroundCanvas.nativeElement);
-    this.threeService.animate();
+    this.backgroundThreeService.init(this.backgroundCanvas.nativeElement);
     window.addEventListener('resize', this.onResize.bind(this));
   }
+
   ngOnDestroy() {
     window.removeEventListener('resize', this.onResize.bind(this));
-    // Pas besoin de libérer toutes les ressources, juste celles de background
-    // car d'autres composants pourraient utiliser la navbar
+    this.backgroundThreeService.dispose();
   }
 
   private onResize() {
-    this.threeService.onResize();
+    this.backgroundThreeService.onResize();
   }
 }

@@ -34,7 +34,7 @@ export class BackgroundThreeService {
     
     // =============================== INITIALISATION SCENE ===============================
     this.scene = new THREE.Scene();
-
+    //this.scene.fog = new THREE.Fog( 0xcccccc, 1, 1000 );
     // =============================== INITIALISATION CAMERA ===============================
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -53,20 +53,39 @@ export class BackgroundThreeService {
     this.renderer = new THREE.WebGLRenderer({ 
       canvas, 
       alpha: false,  // Désactiver alpha pour un fond solide
-      antialias: true
+      antialias: true,
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio));
     this.renderer.setClearColor(0xffffff, 0); // Fond noir opaque
 
-    // =============================== AJOUT DE LUMIÈRES ===============================
-    // Réduction de l'intensité des lumières
-    const pointLight = new THREE.PointLight(0xffffff, 10000,20000); // Intensité réduite davantage
-    pointLight.position.set(5, 5, 5);
+    // Activer les ombres dans le renderer
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 2); // Intensité modérée
-    ambientLight.position.set(50, 50, 50);
-    this.scene.add(pointLight, ambientLight);
+    // =============================== AJOUT DE LUMIÈRES ===============================
+    /*    const pointLight = new THREE.PointLight(0xffffff, 0, 20000);
+    pointLight.position.set(0, 0, 100);
+    pointLight.castShadow = true;
+    this.scene.add(pointLight);
+    */
+    // Lumière directionnelle principale pour ombres marquées
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+    directionalLight.position.set(10, 10, 10);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 500;
+    directionalLight.shadow.bias = -0.001;
+    this.scene.add(directionalLight);
+
+    // Lumière ambiante faible pour garder du contraste
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+    this.scene.add(ambientLight);
+
+    // Brouillard gris avec distances optimisées
+    this.scene.fog = new THREE.Fog(0xcccccc, 1, 500);
 
     // =============================== HELPERS (désactivés) ===============================
     // const lighthelper = new THREE.PointLightHelper(pointLight, 1);
@@ -88,10 +107,10 @@ export class BackgroundThreeService {
     console.log('Gestionnaire de mouvement souris attaché');
 
     // =============================== LUMIÈRE MOBILE SUIVANT LA CAMÉRA ===============================
-    this.light = new THREE.PointLight(0xffffff, 0.4, 200); // Intensité réduite de 0.8 à 0.4
+    /*this.light = new THREE.PointLight(0xffffff, 200, 200); // Intensité réduite de 0.4 à 0.2
     this.light.position.copy(this.camera.position);
     this.scene.add(this.light);
-
+*/
     // =============================== POSITION INITIALE CAMERA ===============================
     this.moveCamera();
 
@@ -112,6 +131,7 @@ export class BackgroundThreeService {
     this.targetRotationX = this.mouseY * 0.1; // Rotation subtile sur X
     this.targetRotationY = this.mouseX * 0.1; // Rotation subtile sur Y
   }
+  
   /**
    * Charge les modèles 3D
    */
@@ -123,43 +143,36 @@ export class BackgroundThreeService {
     this.loadGLB('scene_bureau', 'assets/models/scene_bureau.glb', { x: 0, y: -5, z: 10 }, 1, (bureau) => {
       // --- Initialisation position/rotation ---
       bureau.position.set(5, -23, 3);
-      bureau.rotation.y = THREE.MathUtils.degToRad(-35);
+      bureau.rotation.y = THREE.MathUtils.degToRad(-35); // Rotation initiale pour aligner le bureau
 
-      // --- Gestion des lumières du bureau ---
-      bureau.traverse((child) => {
-        if (child instanceof THREE.PointLight) {
-          child.intensity = 0;
-          child.color.set(0xff0000); // Changer la couleur en rouge
-        }
-      });
 
-      // --- Application du matériau MeshStandardMaterial à tous les Mesh du bureau ---
-      bureau.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          const originalMap = child.material instanceof THREE.MeshStandardMaterial ? child.material.map : null;
-          const newMaterial = new THREE.MeshStandardMaterial({
-            color: child.material ? child.material.color : 0xff000,
-            map: originalMap,
-            roughness: 0.3,
-            metalness: 0.1,
-            envMapIntensity: 1.0
-          });
-          child.material = newMaterial;
-        }
-      });
 
       // --- Application d'un effet d'émission aux écrans/moniteurs ---
       bureau.traverse((child) => {
         if (
           child instanceof THREE.Mesh &&
-          (child.name.includes('screen') || child.name.includes('monitor') || child.name.includes('display'))
+          (child.name.includes('Cube.005') || child.name.includes('Cube.008') || child.name.includes('display'))
         ) {
+          /*
           const emissiveMat = new THREE.MeshStandardMaterial({
             color: 0xffffff,
             emissive: 0x3333ff,
-            emissiveIntensity: 0.5
-          });
+            emissiveIntensity: 0
+          });*/
+              const emissiveMat = new THREE.MeshStandardMaterial({
+
+            color: 0xffffff,
+      side: THREE.BackSide, // Assure la visibilité à l'intérieur
+
+    })
           child.material = emissiveMat;
+        }
+      });
+
+      // Désactiver toutes les lumières du modèle "scene_bureau"
+      bureau.traverse((child) => {
+        if (child instanceof THREE.Light) {
+          child.intensity = 0;
         }
       });
 
@@ -177,10 +190,10 @@ export class BackgroundThreeService {
     // ----------- FOND -----------
     this.loadGLB('scene_fond', 'assets/models/scene_fond.glb', { x: 0, y: -5, z: 10 }, 1, (fond) => {
       // Positionnement et inclinaison du fond
-      fond.position.y = 30;
-      fond.position.z = -100;
-      fond.position.x = 50;
-      fond.rotation.x = 0.2; // Légère inclinaison pour mieux voir
+      fond.position.y = 29.5;
+      fond.position.z = -75;
+      fond.position.x = 59;
+      fond.rotation.y = THREE.MathUtils.degToRad(-65);; // Légère inclinaison pour mieux voir
     });
 
     // ----------- PRISMES -----------
@@ -208,7 +221,119 @@ export class BackgroundThreeService {
     // ----------- MATÉRIAUX GLOBAUX (hors sphère d'environnement) -----------
     // Application différée des matériaux pour s'assurer que tous les modèles sont chargés
     setTimeout(() => {
-      console.log("Application du matériau global uniforme à tous les objets...");
+      console.log("Application du matériau global avec veines colorées et wireframe...");
+      
+      // Définir les shaders de veines colorées
+      const vertexShader = `
+        varying vec3 vWorldPosition;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        varying vec2 vUv;
+
+        #include <common>
+        #include <lights_pars_begin>
+
+        void main() {
+          vUv = uv;
+          vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+          vNormal = normalize(normalMatrix * normal);
+          
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          vViewPosition = -mvPosition.xyz;
+          
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `;
+
+      const fragmentShader = `
+        uniform float time;
+        varying vec3 vWorldPosition;
+        varying vec3 vNormal;
+
+        // === Simplex Noise ===
+        vec3 permute(vec3 x) {
+          return mod(((x * 34.0) + 1.0) * x, 289.0);
+        }
+        float snoise(vec2 v) {
+          const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                              -0.577350269189626, 0.024390243902439);
+          vec2 i = floor(v + dot(v, C.yy));
+          vec2 x0 = v - i + dot(i, C.xx);
+          vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+          vec4 x12 = x0.xyxy + C.xxzz;
+          x12.xy -= i1;
+          i = mod(i, 289.0);
+          vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) +
+                           i.x + vec3(0.0, i1.x, 1.0));
+          vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+          m = m * m;
+          m = m * m;
+          vec3 x = 2.0 * fract(p * C.www) - 1.0;
+          vec3 h = abs(x) - 0.5;
+          vec3 ox = floor(x + 0.5);
+          vec3 a0 = x - ox;
+          m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+          vec3 g;
+          g.x  = a0.x * x0.x + h.x * x0.y;
+          g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+          return 130.0 * dot(m, g);
+        }
+
+        // Dégradé coloré léger
+        vec3 getColor(float t) {
+          return vec3(0.8 + 0.2 * sin(t * 6.283 + 0.0),
+                      0.8 + 0.2 * sin(t * 6.283 + 2.0),
+                      0.8 + 0.2 * sin(t * 6.283 + 4.0));
+        }
+
+        void main() {
+          vec3 normalizedPos = normalize(vWorldPosition);
+          vec2 uv;
+          vec3 absNormal = abs(vNormal);
+          
+          if (absNormal.x > absNormal.y && absNormal.x > absNormal.z) {
+            // Face X : utiliser Y et Z
+            uv = vWorldPosition.yz * 0.1;
+          } else if (absNormal.y > absNormal.z) {
+            // Face Y : utiliser X et Z  
+            uv = vWorldPosition.xz * 0.1;
+          } else {
+            // Face Z : utiliser X et Y
+            uv = vWorldPosition.xy * 0.1;
+          }
+
+          // Première couche de noise
+          float noise1 = snoise(uv + vec2(time * 0.05, 1.0));
+
+          // Seconde couche de noise, plus petite échelle et déplacement
+          float noise2 = snoise(uv * 1.5 + vec2(0.0, time * 0.03));
+
+          // Combinaison : produit une sorte de lignes de turbulence croisées
+          float combined = abs(noise1*1.3 - noise2 * 0.5);
+
+          // Amplifie la séparation et réduit l'épaisseur des veines
+          float veins = 1.0 - smoothstep(0.2, 0.3, combined);
+
+          // Couleur de la veine (dégradé cyclique)
+          float t = fract(uv.x + time * 0.1);
+          vec3 veinColor = getColor(t);
+
+          // Couleur de base pierre avec variation subtile
+          vec3 stoneColor = vec3(0.9 + 0.1 * snoise(uv * 0.5));
+
+          // Effet de contour basé sur la normale pour faire ressortir les formes
+          float edgeFactor = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
+          edgeFactor = smoothstep(0.3, 0.7, edgeFactor) * 0.1;
+          
+          // Assombrir les bords pour donner du volume
+          stoneColor = mix(stoneColor, vec3(0.6), edgeFactor);
+
+          // Mélange avec influence des veines réduite
+          vec3 finalColor = mix(stoneColor*1.0, veinColor*1.0, veins * 1.1);
+
+          gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `;
       
       const debugMaterials: {name: string, oldMaterial: string, color: string}[] = [];
       
@@ -229,16 +354,56 @@ export class BackgroundThreeService {
             oldMaterial: child.material ? child.material.type : 'undefined',
             color: child.material && (child.material as any).color ? (child.material as any).color.getHexString() : 'no color'
           });
+              child.castShadow = true;
+    child.receiveShadow = true;
           
-          // Créer un nouveau matériau avec des paramètres FIXES (pas basés sur l'ancien matériau)
-          const newMaterial = new THREE.MeshStandardMaterial({
-            color: 0xff0000, // Forcer une couleur de base uniforme pour tous
-            roughness: 0.3,
-            metalness: 0.7,
-            envMapIntensity: 1.0
+
+          // Créer un matériau avec shader de veines colorées
+          const veinMaterial = new THREE.ShaderMaterial({
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            side: THREE.FrontSide,
+            uniforms: {
+              time: { value: 0 }
+            }
           });
-          
-          child.material = newMaterial;
+
+          // Créer un matériau wireframe transparent
+          const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.15,
+            side: THREE.FrontSide
+          });
+
+          // Remplacer le mesh original par le mesh avec veines
+          const baseMesh = new THREE.Mesh(child.geometry, veinMaterial);
+          baseMesh.position.copy(child.position);
+          baseMesh.rotation.copy(child.rotation);
+          baseMesh.scale.copy(child.scale);
+          baseMesh.castShadow = true;
+          baseMesh.receiveShadow = true;
+
+          // Créer le wireframe superposé
+          const wireframeMesh = new THREE.Mesh(child.geometry, wireframeMaterial);
+          wireframeMesh.position.copy(child.position);
+          wireframeMesh.rotation.copy(child.rotation);
+          wireframeMesh.scale.copy(child.scale);
+          wireframeMesh.castShadow = false;
+          wireframeMesh.receiveShadow = false;
+
+          // Ajouter les deux meshes à la scène
+          if (child.parent) {
+            child.parent.add(baseMesh);
+            child.parent.add(wireframeMesh);
+            // Retirer l'ancien mesh
+            child.parent.remove(child);
+          } else {
+            this.scene.add(baseMesh);
+            this.scene.add(wireframeMesh);
+            this.scene.remove(child);
+          }
         }
       });
       
@@ -286,8 +451,8 @@ private moveCamera() {
 console.log('Lights in scene:', lights);
 
   const initialPosition = { x: -3, y: 0, z: 300 };
-  const bureauPosition = { x: 20, y: -20, z: 10 };
-  const fondPosition = { x: 60, y: 30, z: -100 }; // Position de scene_fond
+  const bureauPosition = { x: 16, y: -20, z: 9.5 };
+  const fondPosition = { x: 62, y: 30, z: -70 }; // Position de scene_fond
 
   // Rotations fixes (en radians) pour chaque section
   const initialRotation = THREE.MathUtils.degToRad(-3.69);
@@ -316,37 +481,41 @@ console.log('Lights in scene:', lights);
 
     // Appliquer directement la rotation exacte du bureau
     this.camera.rotation.y = bureauRotation;
-  } else if (t > -1500 && t <= -1050) {
+  } else if (t > -1800 && t <= -1050) {
     // Section 3 : Transition vers scene_fond
-    const progress = (Math.abs(t) - 1050) / 450; // Progression entre -1050 et -1500
+    const progress = (Math.abs(t) - 1050) / 750; // Progression entre -1050 et -1500
 
     // Positions
     this.camera.position.x = bureauPosition.x + (fondPosition.x - bureauPosition.x) * progress;
     this.camera.position.y = bureauPosition.y + (fondPosition.y - bureauPosition.y) * progress;
     this.camera.position.z = bureauPosition.z + (fondPosition.z - bureauPosition.z) * progress;
 
-    // Rotation progressive vers scene_fond
-    const exactRotationY = bureauRotation + (fondRotation - bureauRotation) * progress;
+    // Rotation progressive vers scene_fond avec rotation supplémentaire
+    const additionalRotation = THREE.MathUtils.degToRad(-40); // Rotation supplémentaire de 20 degrés
+    const targetRotation = fondRotation + additionalRotation;
+    const exactRotationY = bureauRotation + (targetRotation - bureauRotation) * progress;
     this.camera.rotation.y = exactRotationY;
-  } else if (t >= -2000 && t <= -1500) {
+  } else if (t >= -2100 && t <= -1800) {
     // Section 4 : Stagnation à scene_fond
     this.camera.position.x = fondPosition.x;
     this.camera.position.y = fondPosition.y;
     this.camera.position.z = fondPosition.z;
 
-    // Rotation fixe à scene_fond
-    this.camera.rotation.y = fondRotation;
+      // Rotation fixe à scene_fond avec rotation supplémentaire
+    const additionalRotation = THREE.MathUtils.degToRad(-40); // Même rotation supplémentaire
+    this.camera.rotation.y = fondRotation + additionalRotation;
   } else {
     // Section 5 : Après scene_fond
-    const progress = (Math.abs(t) - 2000) / 500; // Progression après -2000
+    const progress = (Math.abs(t) - 2100) / 400; // Progression après -2100
 
     // Positions
-    this.camera.position.x = fondPosition.x + progress * 10; // Exemple de mouvement
-    this.camera.position.y = fondPosition.y + progress * -5;
-    this.camera.position.z = fondPosition.z + progress * 20;
+    this.camera.position.x = fondPosition.x + progress * 20; // Exemple de mouvement
+    this.camera.position.y = fondPosition.y + progress * -10;
+    this.camera.position.z = fondPosition.z + progress * 50;
 
-    // Rotation fixe ou légère transition
-    this.camera.rotation.y = fondRotation;
+    // Rotation continue avec la même rotation supplémentaire
+    const additionalRotation = THREE.MathUtils.degToRad(-40); // Même rotation supplémentaire
+    this.camera.rotation.y = fondRotation + additionalRotation;
   }
 
   // Mettre à jour la position et la rotation de la lumière
@@ -388,7 +557,7 @@ console.log('Lights in scene:', lights);
         this.logCameraInfo(`Camera pendant l'animation (frame ${frameCount})`);
       }
       
-      // Mettre à jour le shader de la sphère d'environnement si elle existe
+      // Mettre à jour les shaders avec uniforms time
       this.scene.children.forEach(child => {
         if (child instanceof THREE.Mesh && 
             child.material instanceof THREE.ShaderMaterial && 
@@ -406,7 +575,9 @@ console.log('Lights in scene:', lights);
       
       // Animation des prismes clonés pour plus de dynamisme
       this.scene.children.forEach(child => {
-        if (child instanceof THREE.Group && child !== this.models['prisme'] && child !== this.models['scene_bureau']) {
+        if (child instanceof THREE.Group && 
+            child !== this.models['prisme'] && 
+            child !== this.models['scene_fond']) {
           child.rotation.x += 0.002;
           child.rotation.y += 0.003;
         }
@@ -559,13 +730,13 @@ console.log('Lights in scene:', lights);
   }
 
   private createEnvironment() {
-    console.log("Création de l'environnement avec shader minimal...");
+    console.log("Création de l'environnement avec shader amélioré...");
 
     // Ajuster la caméra pour voir le fond
     this.camera.far = 5000;
     this.camera.updateProjectionMatrix();
 
-    // Shader minimal pour tester la visibilité
+    // Shader pour la sphère d'environnement avec bande horizontale colorée et effets supplémentaires
     const vertexShader = `
       varying vec2 vUv;
       void main() {
@@ -575,20 +746,96 @@ console.log('Lights in scene:', lights);
     `;
 
     const fragmentShader = `
-      varying vec2 vUv;
-      void main() {
-        gl_FragColor = vec4(vUv, 0.0, 1.0); // Gradient UV simple
-      }
-    `;
 
-    // Vérification et ajustement du shader pour la sphère inversée
-    const geometry = new THREE.SphereGeometry(2000, 64, 64); // Sphère très grande
+  uniform float time;
+  uniform float glowIntensity;
+  uniform float noiseStrength;
+  varying vec2 vUv;
+
+  // === Simplex Noise 2D ===
+  vec3 permute(vec3 x) {
+    return mod(((x * 34.0) + 1.0) * x, 289.0);
+  }
+
+  float snoise(vec2 v) {
+    const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                        -0.577350269189626, 0.024390243902439);
+    vec2 i = floor(v + dot(v, C.yy));
+    vec2 x0 = v - i + dot(i, C.xx);
+    vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+    vec4 x12 = x0.xyxy + C.xxzz;
+    x12.xy -= i1;
+    i = mod(i, 289.0);
+    vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) +
+                     i.x + vec3(0.0, i1.x, 1.0));
+    vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+    m = m * m;
+    m = m * m;
+    vec3 x = 2.0 * fract(p * C.www) - 1.0;
+    vec3 h = abs(x) - 0.5;
+    vec3 ox = floor(x + 0.5);
+    vec3 a0 = x - ox;
+    m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+    vec3 g;
+    g.x  = a0.x * x0.x + h.x * x0.y;
+    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+    return 130.0 * dot(m, g);
+  }
+
+  // === Dégradé cyclique fluide ===
+  vec3 getColor(float t) {
+    float r = 0.8 + 0.2 * sin(t * 6.283 + 0.0);
+    float g = 0.8 + 0.2 * sin(t * 6.283 + 2.0);
+    float b = 0.8 + 0.2 * sin(t * 6.283 + 4.0);
+    return vec3(r, g, b);
+  }
+
+  float rand(vec2 co) {
+    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+  }
+
+  void main() {
+  float bandCenter = 0.5;
+  float bandWidth = 0.05;
+  float softness = 0.001;
+
+  // --- Masque pour la bande (reste centré, inchangé) ---
+  float dist = abs(vUv.y - bandCenter);
+  float mask = 1.0 - smoothstep(bandWidth / 2.0, bandWidth / 2.0 + softness, dist);
+  float glow = 1.0 - smoothstep(bandWidth / 2.0 + 0.03, bandWidth / 2.0 + 0.08, dist);
+
+  // --- Déformer les UV uniquement pour les couleurs ---
+  vec2 warpedUv = vUv;
+  float deformation = snoise(vUv * 6.0 + vec2(time * 0.1, 0.0)); // noise animé
+  warpedUv.x += deformation * 0.1;
+  warpedUv.y += deformation * 0.1;
+
+  // --- Gradient cyclique sur les UV déformés ---
+  float gradientT = fract(warpedUv.x + time * 0.05);
+  vec3 bandColor = getColor(gradientT);
+
+  // --- Grain/bruit subtil ---
+  float grain = rand(vUv + time * 0.5);
+  bandColor += noiseStrength * (grain - 0.5);
+
+  // --- Couleur finale ---
+  vec3 background = vec3(0);
+  vec3 finalColor = mix(background, bandColor, glow * glowIntensity);
+  finalColor = mix(finalColor, bandColor, mask);
+
+  gl_FragColor = vec4(finalColor, 1.0);
+}
+`;
+
+    const geometry = new THREE.SphereGeometry(1000, 64, 64); // Sphère très grande
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader: vertexShader,
       fragmentShader: fragmentShader,
       side: THREE.BackSide, // Assure la visibilité à l'intérieur
       uniforms: {
-        time: { value: 0 }
+        time: { value: 0 },
+        glowIntensity: { value: 0.05 },
+        noiseStrength: { value: 0.05 }
       }
     });
 
@@ -597,56 +844,7 @@ console.log('Lights in scene:', lights);
     envSphere.renderOrder = -1000;
     this.scene.add(envSphere);
 
-    // Correction pour appliquer le shader uniquement à la petite sphère
-    const testShaderMaterial = new THREE.ShaderMaterial({
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
-      side: THREE.FrontSide, // Assure la visibilité extérieure
-      uniforms: {
-        time: { value: 0 }
-      }
-    });
-
-    const testGeometry = new THREE.SphereGeometry(50, 32, 32); // Sphère plus petite
-    const testSphere = new THREE.Mesh(testGeometry, testShaderMaterial);
-    testSphere.position.set(0, 0, -200); // Positionner la sphère devant la caméra
-    testSphere.renderOrder = 0;
-    this.scene.add(testSphere);
-    console.log("Petite sphère corrigée avec shader distinct:", testSphere);
-
-    // Ajout de logs pour vérifier le ShaderMaterial
-    console.log("ShaderMaterial de la sphère d'environnement:", shaderMaterial);
-    console.log("ShaderMaterial de la petite sphère:", testShaderMaterial);
-
-    // Test avec un MeshBasicMaterial coloré sur la petite sphère
-    const debugMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-
-
-    // Création d'une nouvelle sphère pour le test avec MeshBasicMaterial
-    const debugSphere = new THREE.Mesh(
-      new THREE.SphereGeometry(0.5, 32, 32),
-      new THREE.MeshBasicMaterial({ color: 0xff0000 })
-    );
-    debugSphere.position.set(0, 0, -5);
-    this.scene.add(debugSphere);
-    console.log("Nouvelle sphère de test avec MeshBasicMaterial ajoutée à la scène:", debugSphere);
-
-    // Création d'une sphère de test distincte avec MeshBasicMaterial
-    const separateDebugSphere = new THREE.Mesh(
-      new THREE.SphereGeometry(50, 32, 32),
-      new THREE.MeshBasicMaterial({ color: 0xff0000 })
-    );
-    separateDebugSphere.position.set(0, 0, -300); // Position différente pour éviter les conflits
-    this.scene.add(separateDebugSphere);
-    console.log("Sphère de test distincte avec MeshBasicMaterial ajoutée à la scène:", separateDebugSphere);
-
-    console.log("Sphère d'environnement ajoutée avec shader procédural inversé:", envSphere);
+    console.log("Sphère d'environnement ajoutée avec shader amélioré:", envSphere);
   }
-
-
-
-
-
-
 
 }
