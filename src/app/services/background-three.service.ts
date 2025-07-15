@@ -308,28 +308,34 @@ export class BackgroundThreeService {
           // Seconde couche de noise, plus petite échelle et déplacement
           float noise2 = snoise(uv * 1.5 + vec2(0.0, time * 0.03));
 
-          // Combinaison : produit une sorte de lignes de turbulence croisées
-          float combined = abs(noise1*1.3 - noise2 * 0.5);
+          // Combinaison pour créer des veines continues
+          float combined = noise1 * 0.7 + noise2 * 0.3;
 
-          // Amplifie la séparation et réduit l'épaisseur des veines
-          float veins = 1.0 - smoothstep(0.2, 0.3, combined);
+          // Créer des veines continues sans seuillage dur
+          float veinIntensity = abs(sin(combined * 3.14159 * 2.0)) * 0.8 + 0.2;
 
           // Couleur de la veine (dégradé cyclique)
-          float t = fract(uv.x + time * 0.1);
+          float t = fract(uv.x + time * 0.1 + combined * 0.5);
           vec3 veinColor = getColor(t);
 
           // Couleur de base pierre avec variation subtile
-          vec3 stoneColor = vec3(0.9 + 0.1 * snoise(uv * 0.5));
+          vec3 stoneColor = vec3(0.8 + 0.2 * snoise(uv * 0.5));
+
+          // Variation de luminosité basée sur le bruit pour créer des zones sombres et claires
+          float lightVariation = (noise1 + noise2) * 0.3 + 0.7;
+          stoneColor *= lightVariation;
 
           // Effet de contour basé sur la normale pour faire ressortir les formes
           float edgeFactor = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
-          edgeFactor = smoothstep(0.3, 0.7, edgeFactor) * 0.1;
+          edgeFactor = smoothstep(0.3, 0.7, edgeFactor) * 0.2;
           
           // Assombrir les bords pour donner du volume
-          stoneColor = mix(stoneColor, vec3(0.6), edgeFactor);
+          stoneColor = mix(stoneColor, vec3(0.4), edgeFactor);
 
-          // Mélange avec influence des veines réduite
-          vec3 finalColor = mix(stoneColor*1.0, veinColor*1.0, veins * 1.1);
+          // Mélanger les couleurs avec les veines toujours visibles
+          // Les veines s'adaptent à la luminosité de la pierre
+          vec3 finalVeinColor = veinColor * (lightVariation * 0.5 + 0.5);
+          vec3 finalColor = mix(stoneColor, finalVeinColor, veinIntensity * 0.6);
 
           gl_FragColor = vec4(finalColor, 1.0);
         }

@@ -65,6 +65,7 @@
 main {
   position: relative;
   z-index: 1;
+
 }
 
 
@@ -76,10 +77,10 @@ body, html {
   overflow-x: hidden;
 }
 
-/* Empêche Bootstrap ou d'autres styles d'appliquer un fond blanc */
 main, section, .container, .row, .col, nav, header {
-  background-color: transparent !important;
+    background-color: transparent !important;
 }
+
 
 /* Style du footer */
 footer {
@@ -90,7 +91,8 @@ footer {
     height: 70px; /* Hauteur réduite pour une barre plus compacte */
     z-index: 10;
     background-color: black !important;
-    color: white;
+  color: white;
+  padding: 10px;
     text-align: center;
     display: flex;
     align-items: center;
@@ -118,4 +120,10 @@ footer {
     height: 32px;
     /* Filtre pour rendre les icônes blanches */
     filter: brightness(0) invert(1);
+}
+
+/* Ajustement pour la navbar réduite */
+.shrink-navbar ~ .background-canvas {
+  visibility: visible;
+  opacity: 1;
 }

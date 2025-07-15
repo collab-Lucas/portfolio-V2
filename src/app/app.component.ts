@@ -16,7 +16,8 @@ import { ContactFormComponent } from './components/contact-form/contact-form.com
     AboutComponent,
     SkillsComponent,
     ContactFormComponent
-  ],  template: `
+  ],
+  template: `
     <app-background></app-background>
     <app-navbar></app-navbar>
     <main>
@@ -28,18 +29,20 @@ import { ContactFormComponent } from './components/contact-form/contact-form.com
       </section>
       <section id="contact">
         <app-contact-form></app-contact-form>
-      </section>      <footer class="footer-bar">
+      </section>
+      <footer class="footer-bar">
         <div class="icon-container">
-            <a href="https://linkedin.com/in/..." target="_blank" class="icon-link">
+            <a href="https://www.linkedin.com/in/lucas-bonneau-8396bb144/" target="_blank" class="icon-link">
                 <img src="assets/img/brands/icone_linkedin.svg" alt="LinkedIn" class="footer-icon">
-            </a>
-            <a href="https://github.com/..." target="_blank" class="icon-link">
+          </a>
+            <a href="https://github.com/collab-Lucas" target="_blank" class="icon-link">
                 <img src="assets/img/brands/icone_github.svg" alt="GitHub" class="footer-icon">
-            </a>
+          </a>
         </div>
-    </footer>
+      </footer>
     </main>
   `,
+  styles: [],
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {

@@ -49,6 +49,8 @@
 .navbar {
   transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   position: fixed;
+  background-color: #333;
+  color: white;
 }
 
 /* Styles des éléments de navigation */
@@ -139,7 +141,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 1000px;
+  height: 100vh;
   overflow: hidden;
   z-index: -1;
   pointer-events: none;
@@ -150,7 +152,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 1000px;
+  height: 60px;
   display: block; 
   transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
@@ -160,7 +162,7 @@
 }
 
 .shrink-navbar .navbar-canvas {
-  transform: translateY(-940px);
+  transform: translateY(-94vh);
   filter: brightness(0.8);
 }
 
@@ -175,7 +177,7 @@
 }
 
 .large-navbar .navbar-brand-section {
-  transform: translateY(420px);
+  transform: translateY(42vh);
   opacity: 0.9;
 }
 
@@ -384,15 +386,16 @@
 /* Panneau de contrôle des lumières */
 .light-settings-panel {
   position: fixed;
-  top: 70px;
-  right: 20px;
-  width: 280px;
+  top: 0px;
+  left: 0px; /* Déplace le panneau à gauche */
+  width: 400px; /* Augmente la largeur */
+  height: 90vh;
   background: rgba(10, 10, 15, 0.95);
   border-radius: 12px;
   padding: 1rem;
   color: white;
   box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
-  transform: translateX(350px);
+  transform: translateX(-450px); /* Ajuste la position hors écran */
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   z-index: 1050;
   backdrop-filter: blur(10px);
@@ -401,7 +404,7 @@
 }
 
 .light-settings-panel.show {
-  transform: translateX(0);
+  transform: translateX(0); /* Affiche le panneau */
 }
 
 .panel-header {
@@ -428,7 +431,7 @@
 }
 
 .panel-content {
-  max-height: 60vh;
+  height: calc(90vh - 70px);
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-width: thin;
@@ -471,8 +474,8 @@
 }
 
 .form-control-color {
-  width: 20px;
-  height: 20px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -485,8 +488,8 @@
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
-  width: 20px;
-  height: 20px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
