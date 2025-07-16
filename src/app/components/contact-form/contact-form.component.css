@@ -40,11 +40,12 @@
   max-width: none;
   padding-right: 0;
   filter: contrast(100%);
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+  border-radius: 10px;
 
   margin-top: 120px;
   margin-left: 120px;
   margin-right: 120px;
-  margin-bottom: -120px;
+  margin-bottom: -10px;
+  padding-bottom: 120px ;
+   padding-top: 90px ;
 }

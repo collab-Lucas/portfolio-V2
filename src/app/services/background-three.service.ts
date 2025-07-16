@@ -16,9 +16,7 @@ export class BackgroundThreeService {
   private boundMouseMove: any; // Pour stocker la référence à la fonction de mouvement souris
   private mouseX = 0;
   private mouseY = 0;
-  private targetRotationX = 0;
-  private targetRotationY = 0;
-  private light!: THREE.PointLight; // Déclaration de la lumière mobile
+  private animationTime = 0; // Temps d'animation interne stable
 
 
   constructor() {}
@@ -30,11 +28,8 @@ export class BackgroundThreeService {
   init(canvas: HTMLCanvasElement) {
     if (!canvas) return;
     
-    console.error('===== INITIALISATION DE LA SCÈNE THREE.JS =====');
-    
     // =============================== INITIALISATION SCENE ===============================
     this.scene = new THREE.Scene();
-    //this.scene.fog = new THREE.Fog( 0xcccccc, 1, 1000 );
     // =============================== INITIALISATION CAMERA ===============================
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -64,11 +59,6 @@ export class BackgroundThreeService {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // =============================== AJOUT DE LUMIÈRES ===============================
-    /*    const pointLight = new THREE.PointLight(0xffffff, 0, 20000);
-    pointLight.position.set(0, 0, 100);
-    pointLight.castShadow = true;
-    this.scene.add(pointLight);
-    */
     // Lumière directionnelle principale pour ombres marquées
     const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
     directionalLight.position.set(10, 10, 10);
@@ -87,11 +77,6 @@ export class BackgroundThreeService {
     // Brouillard gris avec distances optimisées
     this.scene.fog = new THREE.Fog(0xcccccc, 1, 500);
 
-    // =============================== HELPERS (désactivés) ===============================
-    // const lighthelper = new THREE.PointLightHelper(pointLight, 1);
-    // const gridHelper = new THREE.GridHelper(400, 50);
-    // this.scene.add(lighthelper, gridHelper);
-
     // =============================== CHARGEMENT DES MODÈLES ===============================
     this.loadModels();
 
@@ -99,18 +84,11 @@ export class BackgroundThreeService {
     // Configurer le gestionnaire de scroll - utiliser addEventListener pour plus de fiabilité
     this.boundMoveCamera = this.moveCamera.bind(this);
     window.addEventListener('scroll', this.boundMoveCamera);
-    console.log('Gestionnaire de scroll attaché');
 
     // Ajouter le gestionnaire de mouvement de souris
     this.boundMouseMove = this.handleMouseMove.bind(this);
     window.addEventListener('mousemove', this.boundMouseMove);
-    console.log('Gestionnaire de mouvement souris attaché');
 
-    // =============================== LUMIÈRE MOBILE SUIVANT LA CAMÉRA ===============================
-    /*this.light = new THREE.PointLight(0xffffff, 200, 200); // Intensité réduite de 0.4 à 0.2
-    this.light.position.copy(this.camera.position);
-    this.scene.add(this.light);
-*/
     // =============================== POSITION INITIALE CAMERA ===============================
     this.moveCamera();
 
@@ -126,10 +104,6 @@ export class BackgroundThreeService {
     // Calcul de la position relative de la souris (-1 à 1)
     this.mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-
-    // Limiter les rotations pour qu'elles restent subtiles
-    this.targetRotationX = this.mouseY * 0.1; // Rotation subtile sur X
-    this.targetRotationY = this.mouseX * 0.1; // Rotation subtile sur Y
   }
   
   /**
@@ -137,8 +111,6 @@ export class BackgroundThreeService {
    */
   // =============================== CHARGEMENT DES MODÈLES 3D ===============================
   private loadModels() {
-    console.log('Chargement des modèles...');
-
     // ----------- BUREAU -----------
     this.loadGLB('scene_bureau', 'assets/models/scene_bureau.glb', { x: 0, y: -5, z: 10 }, 1, (bureau) => {
       // --- Initialisation position/rotation ---
@@ -149,23 +121,68 @@ export class BackgroundThreeService {
 
       // --- Application d'un effet d'émission aux écrans/moniteurs ---
       bureau.traverse((child) => {
-        if (
-          child instanceof THREE.Mesh &&
-          (child.name.includes('Cube.005') || child.name.includes('Cube.008') || child.name.includes('display'))
-        ) {
-          /*
-          const emissiveMat = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            emissive: 0x3333ff,
-            emissiveIntensity: 0
-          });*/
-              const emissiveMat = new THREE.MeshStandardMaterial({
-
-            color: 0xffffff,
-      side: THREE.BackSide, // Assure la visibilité à l'intérieur
-
-    })
-          child.material = emissiveMat;
+        if (child instanceof THREE.Mesh && (child.name.includes('Cube008') || child.name.includes('Cube005'))) {
+          // Matériau avec shader pour effet animé avec blur/halo
+          const screenMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+              time: { value: 0 },
+              baseColor: { value: new THREE.Color(0xffffff) },
+              glowColor: { value: new THREE.Color(0x00ffff) },
+              glowIntensity: { value: 0.8 },
+              haloSize: { value: 0.6 }
+            },
+            vertexShader: `
+              varying vec2 vUv;
+              void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+              }
+            `,
+            fragmentShader: `
+              uniform float time;
+              uniform vec3 baseColor;
+              uniform vec3 glowColor;
+              uniform float glowIntensity;
+              uniform float haloSize;
+              varying vec2 vUv;
+              
+              void main() {
+                vec2 center = vec2(0.5, 0.5);
+                float distFromCenter = length(vUv - center);
+                
+                // Effet de clignotement subtil avec variation
+                float flicker = 0.9 + 0.1 * sin(time * 2.0);
+                
+                // Gradient principal de l'écran - plus stable
+                float screenGradient = 1.0 - smoothstep(0.0, 0.5, distFromCenter);
+                
+                // Couleur de base stable
+                vec3 screenColor = mix(baseColor, glowColor, 0.3);
+                
+                // Effet de halo plus doux
+                float halo = 1.0 - smoothstep(0.0, haloSize, distFromCenter);
+                halo = pow(halo, 1.5);
+                
+                // Combinaison finale plus stable
+                vec3 finalColor = screenColor * flicker;
+                finalColor = mix(finalColor, glowColor, halo * 0.2);
+                
+                // Effet de scanlines très subtil
+                float scanline = sin(vUv.y * 80.0) * 0.01;
+                finalColor += scanline;
+                
+                // Assurer que la couleur reste dans une plage stable
+                finalColor = clamp(finalColor, 0.0, 1.0);
+                
+                gl_FragColor = vec4(finalColor, 1.0);
+              }
+            `,
+            side: THREE.FrontSide,
+            transparent: false,
+            blending: THREE.NormalBlending // Blending normal pour couleur stable
+          });
+          
+          child.material = screenMaterial;
         }
       });
 
@@ -183,8 +200,28 @@ export class BackgroundThreeService {
           lightsInModel.push(child);
         }
       });
-      console.log('Lights in scene_bureau:', lightsInModel);
-      console.log('Bureau modifié avec matériau de base appliqué');
+
+      // --- Debug : liste de tous les éléments/meshes du modèle scene_bureau ---
+      console.log('=== ÉLÉMENTS/MESHES dans scene_bureau ===');
+      const meshesInBureau: { name: string, type: string, geometry?: string, material?: string }[] = [];
+      bureau.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const meshInfo = {
+            name: child.name || 'unnamed',
+            type: 'Mesh',
+            geometry: child.geometry.type,
+            material: child.material ? (Array.isArray(child.material) ? child.material.map(m => m.type).join(', ') : child.material.type) : 'undefined'
+          };
+          meshesInBureau.push(meshInfo);
+          console.log(`Mesh: "${child.name}" | Géométrie: ${meshInfo.geometry} | Matériau: ${meshInfo.material}`);
+        } else if (child instanceof THREE.Group) {
+          console.log(`Group: "${child.name || 'unnamed'}" | Enfants: ${child.children.length}`);
+        } else if (child instanceof THREE.Object3D) {
+          console.log(`Object3D: "${child.name || 'unnamed'}" | Type: ${child.type}`);
+        }
+      });
+      console.log(`Total meshes trouvés: ${meshesInBureau.length}`);
+      console.log('=== FIN LISTE scene_bureau ===');
     });
 
     // ----------- FOND -----------
@@ -221,126 +258,6 @@ export class BackgroundThreeService {
     // ----------- MATÉRIAUX GLOBAUX (hors sphère d'environnement) -----------
     // Application différée des matériaux pour s'assurer que tous les modèles sont chargés
     setTimeout(() => {
-      console.log("Application du matériau global avec veines colorées et wireframe...");
-      
-      // Définir les shaders de veines colorées
-      const vertexShader = `
-        varying vec3 vWorldPosition;
-        varying vec3 vNormal;
-        varying vec3 vViewPosition;
-        varying vec2 vUv;
-
-        #include <common>
-        #include <lights_pars_begin>
-
-        void main() {
-          vUv = uv;
-          vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-          vNormal = normalize(normalMatrix * normal);
-          
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          vViewPosition = -mvPosition.xyz;
-          
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `;
-
-      const fragmentShader = `
-        uniform float time;
-        varying vec3 vWorldPosition;
-        varying vec3 vNormal;
-
-        // === Simplex Noise ===
-        vec3 permute(vec3 x) {
-          return mod(((x * 34.0) + 1.0) * x, 289.0);
-        }
-        float snoise(vec2 v) {
-          const vec4 C = vec4(0.211324865405187, 0.366025403784439,
-                              -0.577350269189626, 0.024390243902439);
-          vec2 i = floor(v + dot(v, C.yy));
-          vec2 x0 = v - i + dot(i, C.xx);
-          vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-          vec4 x12 = x0.xyxy + C.xxzz;
-          x12.xy -= i1;
-          i = mod(i, 289.0);
-          vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) +
-                           i.x + vec3(0.0, i1.x, 1.0));
-          vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
-          m = m * m;
-          m = m * m;
-          vec3 x = 2.0 * fract(p * C.www) - 1.0;
-          vec3 h = abs(x) - 0.5;
-          vec3 ox = floor(x + 0.5);
-          vec3 a0 = x - ox;
-          m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
-          vec3 g;
-          g.x  = a0.x * x0.x + h.x * x0.y;
-          g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-          return 130.0 * dot(m, g);
-        }
-
-        // Dégradé coloré léger
-        vec3 getColor(float t) {
-          return vec3(0.8 + 0.2 * sin(t * 6.283 + 0.0),
-                      0.8 + 0.2 * sin(t * 6.283 + 2.0),
-                      0.8 + 0.2 * sin(t * 6.283 + 4.0));
-        }
-
-        void main() {
-          vec3 normalizedPos = normalize(vWorldPosition);
-          vec2 uv;
-          vec3 absNormal = abs(vNormal);
-          
-          if (absNormal.x > absNormal.y && absNormal.x > absNormal.z) {
-            // Face X : utiliser Y et Z
-            uv = vWorldPosition.yz * 0.1;
-          } else if (absNormal.y > absNormal.z) {
-            // Face Y : utiliser X et Z  
-            uv = vWorldPosition.xz * 0.1;
-          } else {
-            // Face Z : utiliser X et Y
-            uv = vWorldPosition.xy * 0.1;
-          }
-
-          // Première couche de noise
-          float noise1 = snoise(uv + vec2(time * 0.05, 1.0));
-
-          // Seconde couche de noise, plus petite échelle et déplacement
-          float noise2 = snoise(uv * 1.5 + vec2(0.0, time * 0.03));
-
-          // Combinaison pour créer des veines continues
-          float combined = noise1 * 0.7 + noise2 * 0.3;
-
-          // Créer des veines continues sans seuillage dur
-          float veinIntensity = abs(sin(combined * 3.14159 * 2.0)) * 0.8 + 0.2;
-
-          // Couleur de la veine (dégradé cyclique)
-          float t = fract(uv.x + time * 0.1 + combined * 0.5);
-          vec3 veinColor = getColor(t);
-
-          // Couleur de base pierre avec variation subtile
-          vec3 stoneColor = vec3(0.8 + 0.2 * snoise(uv * 0.5));
-
-          // Variation de luminosité basée sur le bruit pour créer des zones sombres et claires
-          float lightVariation = (noise1 + noise2) * 0.3 + 0.7;
-          stoneColor *= lightVariation;
-
-          // Effet de contour basé sur la normale pour faire ressortir les formes
-          float edgeFactor = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
-          edgeFactor = smoothstep(0.3, 0.7, edgeFactor) * 0.2;
-          
-          // Assombrir les bords pour donner du volume
-          stoneColor = mix(stoneColor, vec3(0.4), edgeFactor);
-
-          // Mélanger les couleurs avec les veines toujours visibles
-          // Les veines s'adaptent à la luminosité de la pierre
-          vec3 finalVeinColor = veinColor * (lightVariation * 0.5 + 0.5);
-          vec3 finalColor = mix(stoneColor, finalVeinColor, veinIntensity * 0.6);
-
-          gl_FragColor = vec4(finalColor, 1.0);
-        }
-      `;
-      
       const debugMaterials: {name: string, oldMaterial: string, color: string}[] = [];
       
       this.scene.traverse((child) => {
@@ -349,10 +266,10 @@ export class BackgroundThreeService {
           // Exclure TOUTES les sphères d'environnement (très grandes)
           !(child.geometry instanceof THREE.SphereGeometry && 
             child.geometry.parameters?.radius >= 1000) &&
-          // Exclure toutes les sphères avec ShaderMaterial (comme notre petite sphère de test)
+          // Exclure toutes les sphères avec ShaderMaterial
           !(child.material instanceof THREE.ShaderMaterial) &&
-          // Exclure les écrans/moniteurs (qui ont leur propre matériau émissif)
-          !(child.name && (child.name.includes('screen') || child.name.includes('monitor') || child.name.includes('display')))
+          // Exclure les écrans/moniteurs
+          !(child.name && (child.name.includes('screen') || child.name.includes('Cube005') || child.name.includes('Cube008')))
         ) {
           // Enregistrer l'ancien matériau pour débogage
           debugMaterials.push({
@@ -360,60 +277,185 @@ export class BackgroundThreeService {
             oldMaterial: child.material ? child.material.type : 'undefined',
             color: child.material && (child.material as any).color ? (child.material as any).color.getHexString() : 'no color'
           });
-              child.castShadow = true;
-    child.receiveShadow = true;
           
-
-          // Créer un matériau avec shader de veines colorées
-          const veinMaterial = new THREE.ShaderMaterial({
-            vertexShader: vertexShader,
-            fragmentShader: fragmentShader,
-            side: THREE.FrontSide,
-            uniforms: {
-              time: { value: 0 }
-            }
+          child.castShadow = true;
+          child.receiveShadow = true;
+          
+          // === COUCHE 1: MATÉRIAU DE BASE (réagit à la lumière) ===
+          const originalColor = child.material && (child.material as any).color ? 
+            (child.material as any).color : new THREE.Color(0xffffff);
+          
+          const baseMaterial = new THREE.MeshStandardMaterial({
+            color: originalColor,
+            roughness: 0.5,
+            metalness: 0.3,
+            transparent: false
           });
-
-          // Créer un matériau wireframe transparent
-          const wireframeMaterial = new THREE.MeshBasicMaterial({
+          
+          // Appliquer le matériau de base
+          child.material = baseMaterial;
+          
+          // === COUCHE 2: MATÉRIAU OVERLAY (veines uniquement) ===
+          // Créer une géométrie légèrement plus grande pour éviter le z-fighting
+          const overlayGeometry = child.geometry.clone();
+          overlayGeometry.scale(1.002, 1.002, 1.002);
+          
+          const overlayMaterial = new THREE.MeshBasicMaterial({
             color: 0xffffff,
-            wireframe: true,
             transparent: true,
-            opacity: 0.15,
-            side: THREE.FrontSide
+            opacity: 1.0,
+            alphaTest: 0.1, // Important pour ne pas afficher les parties transparentes
+            side: THREE.DoubleSide,
+            blending: THREE.NormalBlending
           });
+          
+          // Shader pour les veines avec le shader fourni
+          overlayMaterial.onBeforeCompile = (shader: any) => {
+            // Stocker la référence au shader
+            overlayMaterial.userData = overlayMaterial.userData || {};
+            overlayMaterial.userData['shader'] = shader;
+            
+            // Ajouter les uniforms
+            shader.uniforms.time = { value: 0 };
+            
+            // Remplacer complètement le vertex shader
+            shader.vertexShader = `
+              varying vec3 vWorldPosition;
+              varying vec3 vNormal;
+              varying vec3 vViewPosition;
+              varying vec2 vUv;
 
-          // Remplacer le mesh original par le mesh avec veines
-          const baseMesh = new THREE.Mesh(child.geometry, veinMaterial);
-          baseMesh.position.copy(child.position);
-          baseMesh.rotation.copy(child.rotation);
-          baseMesh.scale.copy(child.scale);
-          baseMesh.castShadow = true;
-          baseMesh.receiveShadow = true;
+              #include <common>
+              #include <lights_pars_begin>
 
-          // Créer le wireframe superposé
-          const wireframeMesh = new THREE.Mesh(child.geometry, wireframeMaterial);
-          wireframeMesh.position.copy(child.position);
-          wireframeMesh.rotation.copy(child.rotation);
-          wireframeMesh.scale.copy(child.scale);
-          wireframeMesh.castShadow = false;
-          wireframeMesh.receiveShadow = false;
+              void main() {
+                vUv = uv;
+                vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+                vNormal = normalize(normalMatrix * normal);
+                
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                vViewPosition = -mvPosition.xyz;
+                
+                gl_Position = projectionMatrix * mvPosition;
+              }
+            `;
+            
+            // Remplacer complètement le fragment shader
+            shader.fragmentShader = `
+              uniform float time;
+              varying vec3 vWorldPosition;
+              varying vec3 vNormal;
 
-          // Ajouter les deux meshes à la scène
+              // === Simplex Noise ===
+              vec3 permute(vec3 x) {
+                return mod(((x * 34.0) + 1.0) * x, 289.0);
+              }
+              float snoise(vec2 v) {
+                const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                                    -0.577350269189626, 0.024390243902439);
+                vec2 i = floor(v + dot(v, C.yy));
+                vec2 x0 = v - i + dot(i, C.xx);
+                vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                vec4 x12 = x0.xyxy + C.xxzz;
+                x12.xy -= i1;
+                i = mod(i, 289.0);
+                vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) +
+                                 i.x + vec3(0.0, i1.x, 1.0));
+                vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+                m = m * m;
+                m = m * m;
+                vec3 x = 2.0 * fract(p * C.www) - 1.0;
+                vec3 h = abs(x) - 0.5;
+                vec3 ox = floor(x + 0.5);
+                vec3 a0 = x - ox;
+                m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+                vec3 g;
+                g.x  = a0.x * x0.x + h.x * x0.y;
+                g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+                return 130.0 * dot(m, g);
+              }
+
+              // Dégradé coloré léger
+              vec3 getColor(float t) {
+                return vec3(0.8 + 0.2 * sin(t * 6.283 + 0.0),
+                            0.8 + 0.2 * sin(t * 6.283 + 2.0),
+                            0.8 + 0.2 * sin(t * 6.283 + 4.0));
+              }
+
+              void main() {
+                vec3 normalizedPos = normalize(vWorldPosition);
+                vec2 uv;
+                vec3 absNormal = abs(vNormal);
+                
+                if (absNormal.x > absNormal.y && absNormal.x > absNormal.z) {
+                  // Face X : utiliser Y et Z
+                  uv = vWorldPosition.yz * 0.1;
+                } else if (absNormal.y > absNormal.z) {
+                  // Face Y : utiliser X et Z  
+                  uv = vWorldPosition.xz * 0.1;
+                } else {
+                  // Face Z : utiliser X et Y avec la même échelle
+                  uv = vWorldPosition.xy * 0.1;
+                }
+
+                // Première couche de noise
+                float noise1 = snoise(uv + vec2(time * 0.05, 1.0));
+
+                // Seconde couche de noise, plus petite échelle et déplacement
+                float noise2 = snoise(uv * 1.5 + vec2(0.0, time * 0.03));
+
+                // Combinaison : produit une sorte de lignes de turbulence croisées
+                float combined = abs(noise1*1.3 - noise2 * 0.5);
+
+                // Amplifie la séparation et réduit l'épaisseur des veines
+                float veins = 1.0 - smoothstep(0.2, 0.3, combined);
+
+                // Couleur de la veine (dégradé cyclique)
+                float t = fract(uv.x + time * 0.1);
+                vec3 veinColor = getColor(t);
+
+                // Couleur de base pierre avec variation subtile
+                vec3 stoneColor = vec3(0.9 + 0.1 * snoise(uv * 0.5));
+
+                // Effet de contour basé sur la normale pour faire ressortir les formes
+                float edgeFactor = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
+                edgeFactor = smoothstep(0.3, 0.7, edgeFactor) * 0.1;
+                
+                // Assombrir les bords pour donner du volume
+                stoneColor = mix(stoneColor, vec3(0.6), edgeFactor);
+
+                // Pour l'overlay, on ne veut que les veines, pas la pierre
+                // Donc on utilise les veines comme alpha et on garde la couleur des veines
+                vec3 finalColor = veinColor;
+                float alpha = veins * 0.8; // Intensité des veines comme alpha
+                
+                // Discard les pixels trop transparents
+                if (alpha < 0.01) {
+                  discard;
+                }
+                
+                gl_FragColor = vec4(finalColor, alpha);
+              }
+            `;
+          };
+          
+          // Créer le mesh overlay
+          const overlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial);
+          overlayMesh.position.copy(child.position);
+          overlayMesh.rotation.copy(child.rotation);
+          overlayMesh.scale.copy(child.scale);
+          overlayMesh.castShadow = false; // Les veines ne projettent pas d'ombres
+          overlayMesh.receiveShadow = false;
+          
+          // Ajouter l'overlay au même parent que l'objet original
           if (child.parent) {
-            child.parent.add(baseMesh);
-            child.parent.add(wireframeMesh);
-            // Retirer l'ancien mesh
-            child.parent.remove(child);
+            child.parent.add(overlayMesh);
           } else {
-            this.scene.add(baseMesh);
-            this.scene.add(wireframeMesh);
-            this.scene.remove(child);
+            this.scene.add(overlayMesh);
           }
         }
       });
       
-      console.log("Matériaux appliqués:", debugMaterials);
     }, 500); // Attendre que tous les modèles soient chargés
   }
   
@@ -439,7 +481,7 @@ export class BackgroundThreeService {
         if (onLoad) onLoad(model);
       },
       (xhr) => {
-        console.log(`${name}: ${(xhr.loaded / xhr.total * 100)}% loaded`);
+        // Progress loading
       },
       (error) => {
         console.error(`Erreur lors du chargement du modèle ${name}:`, error);
@@ -449,12 +491,6 @@ export class BackgroundThreeService {
 
 private moveCamera() {
   const t = document.body.getBoundingClientRect().top;
-  console.log('Scroll position:', t);
-
-  // Log de la position initiale de la caméra avant toute modification
-  this.logCameraInfo(`Camera avant défilement (scroll: ${t})`);
-  const lights = this.getLightsInScene();
-console.log('Lights in scene:', lights);
 
   const initialPosition = { x: -3, y: 0, z: 300 };
   const bureauPosition = { x: 16, y: -20, z: 9.5 };
@@ -523,15 +559,6 @@ console.log('Lights in scene:', lights);
     const additionalRotation = THREE.MathUtils.degToRad(-40); // Même rotation supplémentaire
     this.camera.rotation.y = fondRotation + additionalRotation;
   }
-
-  // Mettre à jour la position et la rotation de la lumière
-  if (this.light) {
-    this.light.position.copy(this.camera.position);
-    this.light.rotation.copy(this.camera.rotation);
-  }
-
-  // Log de la position finale de la caméra après modifications
-  this.logCameraInfo(`Camera après défilement (scroll: ${t})`);
 }
   /**
    * Gère le redimensionnement de la fenêtre
@@ -542,9 +569,6 @@ console.log('Lights in scene:', lights);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
-    
-    // Log après redimensionnement
-    this.logCameraInfo('Camera après redimensionnement');
   }
 
   /**
@@ -552,24 +576,28 @@ console.log('Lights in scene:', lights);
    */
   private animate() {
     if (!this.renderer || !this.scene || !this.camera) return;
-    
-    // Compteur de frames pour limiter la fréquence des logs
-    let frameCount = 0;
 
     const render = () => {
-      // Log périodique de la position de la caméra (toutes les 100 frames)
-      frameCount++;
-      if (frameCount % 100 === 0) {
-        this.logCameraInfo(`Camera pendant l'animation (frame ${frameCount})`);
-      }
+      // Incrémenter le temps d'animation de façon stable
+      this.animationTime += 0.01;
       
       // Mettre à jour les shaders avec uniforms time
-      this.scene.children.forEach(child => {
-        if (child instanceof THREE.Mesh && 
-            child.material instanceof THREE.ShaderMaterial && 
-            child.material.uniforms && 
-            child.material.uniforms['time'] !== undefined) {
-          child.material.uniforms['time'].value += 0.01;
+      this.scene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          // Pour les ShaderMaterial classiques
+          if (child.material instanceof THREE.ShaderMaterial && 
+              child.material.uniforms && 
+              child.material.uniforms['time'] !== undefined) {
+            child.material.uniforms['time'].value = this.animationTime;
+          }
+          // Pour les matériaux avec onBeforeCompile
+          else if (child.material instanceof THREE.MeshBasicMaterial && 
+                   child.material.userData && 
+                   child.material.userData['shader'] && 
+                   child.material.userData['shader'].uniforms && 
+                   child.material.userData['shader'].uniforms['time']) {
+            child.material.userData['shader'].uniforms['time'].value = this.animationTime;
+          }
         }
       });
       
@@ -623,67 +651,6 @@ console.log('Lights in scene:', lights);
   }
 
   /**
-   * Log la position et rotation de la caméra
-   */
-  private logCameraInfo(prefix: string = 'Camera info'): void {
-    if (!this.camera) return;
-
-    const pos = this.camera.position;
-    const rot = this.camera.rotation;
-    
-    // Convertir les radians en degrés pour une meilleure lisibilité
-    const rotDegrees = {
-      x: THREE.MathUtils.radToDeg(rot.x).toFixed(2),
-      y: THREE.MathUtils.radToDeg(rot.y).toFixed(2),
-      z: THREE.MathUtils.radToDeg(rot.z).toFixed(2)
-    };
-    
-    // Utiliser console.error pour s'assurer que le message est visible
-    console.error(
-      `%c${prefix}:`,
-      'background: #222; color: #bada55; font-size: 16px;',
-      `\nPosition: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(2)}, z=${pos.z.toFixed(2)}`,
-      `\nRotation: x=${rotDegrees.x}°, y=${rotDegrees.y}°, z=${rotDegrees.z}°`
-    );
-
-    // Créer ou mettre à jour un élément DOM pour afficher les infos
-    this.displayCameraInfoOnScreen(prefix, pos, rotDegrees);
-  }
-
-  /**
-   * Affiche les infos de la caméra directement sur l'écran
-   */
-  private displayCameraInfoOnScreen(prefix: string, pos: THREE.Vector3, rot: {x: string, y: string, z: string}): void {
-    try {
-      // Créer ou obtenir l'élément d'affichage
-      let infoElement = document.getElementById('camera-debug-info');
-      if (!infoElement) {
-        infoElement = document.createElement('div');
-        infoElement.id = 'camera-debug-info';
-        infoElement.style.position = 'fixed';
-        infoElement.style.bottom = '10px';
-        infoElement.style.right = '10px';
-        infoElement.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        infoElement.style.color = '#bada55';
-        infoElement.style.padding = '10px';
-        infoElement.style.borderRadius = '5px';
-        infoElement.style.fontFamily = 'monospace';
-        infoElement.style.fontSize = '14px';
-        infoElement.style.zIndex = '9999';
-        document.body.appendChild(infoElement);
-      }
-      
-      // Mettre à jour le contenu
-      infoElement.innerHTML = `
-        <strong>${prefix}</strong><br>
-        Position: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(2)}, z=${pos.z.toFixed(2)}<br>
-        Rotation: x=${rot.x}°, y=${rot.y}°, z=${rot.z}°
-      `;
-    } catch (e) {
-      // Ignorer les erreurs DOM
-    }
-  }
-  /**
    * Nettoie les ressources pour éviter les fuites de mémoire
    */
   dispose() {
@@ -692,10 +659,12 @@ console.log('Lights in scene:', lights);
       this.animationId = null;
     }
     
+    // Réinitialiser le temps d'animation
+    this.animationTime = 0;
+    
     // Supprimer les gestionnaires d'événements
     if (this.boundMoveCamera) {
       window.removeEventListener('scroll', this.boundMoveCamera);
-      console.log('Gestionnaire de scroll détaché');
     }
     
     // Nettoyer les modèles
@@ -718,7 +687,6 @@ console.log('Lights in scene:', lights);
     this.models = {};
         if (this.boundMouseMove) {
       window.removeEventListener('mousemove', this.boundMouseMove);
-      console.log('Gestionnaire de mouvement souris détaché');
     }
     
     
@@ -726,18 +694,7 @@ console.log('Lights in scene:', lights);
     if (this.renderer) this.renderer.dispose();
   }
 
-  /**
-   * Retourne la liste des lumières présentes dans la scène
-   */
-  getLightsInScene(): THREE.Light[] {
-    if (!this.scene) return [];
-
-    return this.scene.children.filter(child => child instanceof THREE.Light) as THREE.Light[];
-  }
-
   private createEnvironment() {
-    console.log("Création de l'environnement avec shader amélioré...");
-
     // Ajuster la caméra pour voir le fond
     this.camera.far = 5000;
     this.camera.updateProjectionMatrix();
@@ -849,8 +806,6 @@ console.log('Lights in scene:', lights);
     envSphere.scale.set(-1, 1, 1); // Inverser la sphère pour que l'intérieur soit visible
     envSphere.renderOrder = -1000;
     this.scene.add(envSphere);
-
-    console.log("Sphère d'environnement ajoutée avec shader amélioré:", envSphere);
   }
 
 }

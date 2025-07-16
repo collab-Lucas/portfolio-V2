@@ -14,7 +14,6 @@ export class ContactService {
   submitForm(form: ContactForm): Observable<boolean> {
     // TODO: Implement actual form submission logic
     // For now, just simulate a successful submission
-    console.log('Form submitted:', form);
     return of(true);
   }
 

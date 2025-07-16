@@ -5,6 +5,16 @@
   left: 50%;
 }
 
+/* Styles pour les textes principaux avec ombre */
+.intro-section h1 {
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+  font-weight: bold;
+}
+
+.intro-section p.lead {
+  text-shadow: 3px 3px 12px rgba(0, 0, 0, 0.8);
+}
+
 .card {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);

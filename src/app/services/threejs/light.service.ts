@@ -304,7 +304,7 @@ export class LightService {
         light.shadow.camera.updateProjectionMatrix();
       }
     } catch (error) {
-      console.warn('Failed to update shadow camera matrix', error);
+      // Failed to update shadow camera matrix
     }
   }
 
@@ -377,10 +377,9 @@ export class LightService {
                 (obj.shadow.camera instanceof THREE.PerspectiveCamera || 
                 obj.shadow.camera instanceof THREE.OrthographicCamera)) {
               obj.shadow.camera.updateProjectionMatrix();
+            }            } catch (error) {
+              // Failed to update shadow camera matrix
             }
-          } catch (error) {
-            console.warn('Failed to update shadow camera matrix', error);
-          }
           
           // Forcer la mise à jour de la shadowMap
           if (obj.shadow.map) {

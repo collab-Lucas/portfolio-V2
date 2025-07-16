@@ -27,6 +27,7 @@ export class NavbarThreeService implements OnDestroy {
   private mixers: THREE.AnimationMixer[] = [];
   private animationActions: THREE.AnimationAction[] = [];
   private clock = new THREE.Clock();
+  private animationTime = 0; // Temps d'animation interne stable
   
   // Variables pour la gestion des modèles et animations
   private modelLoadingStatus = {
@@ -66,8 +67,6 @@ export class NavbarThreeService implements OnDestroy {
   /**
    * Initialise la scène Three.js pour la navbar
    */  initNavbar(canvas: HTMLCanvasElement) {
-    console.log('initNavbar appelé avec canvas:', canvas);
-    
     if (!canvas) {
       console.error('Canvas non disponible pour initNavbar');
       return;
@@ -156,8 +155,6 @@ export class NavbarThreeService implements OnDestroy {
     THREE.Cache.enabled = true; // Active le cache pour les textures
     
     const loader = new GLTFLoader();
-    
-    console.log('Chargement des modèles de la navbar');
       
     // Load navbar_ico
     loader.load(
@@ -185,7 +182,7 @@ export class NavbarThreeService implements OnDestroy {
       },
       undefined,
       (err: unknown) => {
-        console.error('Error loading navbar_ico:', err);
+        // Error loading navbar_ico
         this.modelLoadingStatus.ico = true;
       }
     );
@@ -216,7 +213,7 @@ export class NavbarThreeService implements OnDestroy {
       },
       undefined,
       (err: unknown) => {
-        console.error('Error loading navbar_torus:', err);
+        // Error loading navbar_torus
         this.modelLoadingStatus.torus = true;
       }
     );
@@ -287,74 +284,17 @@ export class NavbarThreeService implements OnDestroy {
       },
       undefined,
       (err: unknown) => {
-        console.error('Error loading navbar_scene:', err);
+        // Error loading navbar_scene
         this.modelLoadingStatus.scene = true;
       }
     );
     setTimeout(() => {
-      console.log("Application du matériau de test simple...");
-      
-      // Ajouter une sphère de test TRÈS SIMPLE
-      const testGeometry = new THREE.SphereGeometry(1, 32, 32);
-      const testMaterial = new THREE.MeshStandardMaterial({
-        color: 0x00ff00, // Vert vif
-        roughness: 0.5,
-        metalness: 0.1
-      });
-      
-      const testMesh = new THREE.Mesh(testGeometry, testMaterial);
-      testMesh.position.set(3, 0, 0); // Positionner clairement visible
-      testMesh.castShadow = true;
-      testMesh.receiveShadow = true;
-      this.navbarScene.add(testMesh);
-      
-      console.log("Sphère verte de test ajoutée");
-      
-      // Créer une deuxième sphère avec shader TRÈS SIMPLE
-      const shaderGeometry = new THREE.SphereGeometry(1, 32, 32);
-      const shaderMaterial = new THREE.MeshStandardMaterial({
-        color: 0xff0000, // Rouge de base
-        roughness: 0.5,
-        metalness: 0.1
-      });
-      
-      // Shader ultra-simple qui change juste la couleur
-      shaderMaterial.onBeforeCompile = (shader: any) => {
-        shader.uniforms.time = { value: 0 };
-        shaderMaterial.userData = shaderMaterial.userData || {};
-        shaderMaterial.userData['shader'] = shader;
-
-        // Remplacer seulement la couleur finale
-        shader.fragmentShader = shader.fragmentShader.replace(
-          'gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
-          `
-          // Test simple : changer la couleur avec le temps
-          float timeColor = sin(time) * 0.5 + 0.5;
-          vec3 testColor = mix(vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 1.0), timeColor);
-          gl_FragColor = vec4( outgoingLight * testColor, diffuseColor.a );
-          `
-        );
-        
-        // Ajouter l'uniform time
-        shader.uniforms.time = { value: 0 };
-      };
-      
-      const shaderMesh = new THREE.Mesh(shaderGeometry, shaderMaterial);
-      shaderMesh.position.set(-3, 0, 0); // Positionner de l'autre côté
-      shaderMesh.castShadow = true;
-      shaderMesh.receiveShadow = true;
-      this.navbarScene.add(shaderMesh);
-      
-      console.log("Sphère avec shader simple ajoutée");
-      
       // Maintenant appliquer des matériaux bicouches aux objets de la navbar
       const debugMaterials: {name: string, oldMaterial: string, color: string}[] = [];
       
       this.navbarScene.traverse((child: THREE.Object3D) => {
         if (
           child instanceof THREE.Mesh &&
-          child !== testMesh &&
-          child !== shaderMesh &&
           // Exclure TOUTES les sphères d'environnement (très grandes)
           !(child.geometry instanceof THREE.SphereGeometry && 
             child.geometry.parameters?.radius >= 1000) &&
@@ -549,12 +489,9 @@ export class NavbarThreeService implements OnDestroy {
           
           // Ajouter à la liste des matériaux personnalisés
           this.customMaterials.push(overlayMaterial);
-          
-          console.log(`✓ Matériau bicouche appliqué à: ${child.name}`);
         }
       });
       
-      console.log("Matériaux standards appliqués:", debugMaterials);
     }, 500);
   }
   
@@ -620,10 +557,10 @@ export class NavbarThreeService implements OnDestroy {
       this.updateShaderUniforms();
 
       if (isLarge) {
-        const timeSec = currentTime * 0.001;
+        // Utiliser le temps d'animation interne pour éviter les sauts
         this.navbarScene.rotation.x = this.currentRotationX;
         this.navbarScene.rotation.y = this.currentRotationY;
-        this.navbarScene.position.y = Math.sin(timeSec * 0.3) * 0.1;
+        this.navbarScene.position.y = Math.sin(this.animationTime * 0.3) * 0.1;
         
         if (this.navbarRenderer.shadowMap.enabled !== true) {
           this.navbarRenderer.shadowMap.enabled = true;
@@ -685,14 +622,15 @@ export class NavbarThreeService implements OnDestroy {
   private updateShaderUniforms(): void {
     if (!this.navbarScene) return;
 
-    const currentTime = performance.now() * 0.001;
+    // Incrémenter le temps d'animation de façon stable
+    this.animationTime += 0.016; // ~60fps
     
     this.navbarScene.traverse((child: THREE.Object3D) => {
       if (child instanceof THREE.Mesh) {
         // Pour les ShaderMaterial classiques
         if (child.material instanceof THREE.ShaderMaterial) {
           if (child.material.uniforms && child.material.uniforms['time']) {
-            child.material.uniforms['time'].value = currentTime;
+            child.material.uniforms['time'].value = this.animationTime;
           }
         }
         // Pour les MeshStandardMaterial et MeshBasicMaterial avec onBeforeCompile
@@ -704,28 +642,28 @@ export class NavbarThreeService implements OnDestroy {
           if (shader.uniforms) {
             // Mettre à jour l'uniform time pour tous les shaders
             if (shader.uniforms['time']) {
-              shader.uniforms['time'].value = currentTime;
+              shader.uniforms['time'].value = this.animationTime;
             }
             
             // Garder les anciens uniforms pour compatibilité avec d'autres shaders
             if (shader.uniforms['noiseScale']) {
-              shader.uniforms['noiseScale'].value = 3.0 + Math.sin(currentTime * 0.2) * 0.5;
+              shader.uniforms['noiseScale'].value = 3.0 + Math.sin(this.animationTime * 0.2) * 0.5;
             }
             
             if (shader.uniforms['waveSpeed']) {
-              shader.uniforms['waveSpeed'].value = 0.5 + Math.sin(currentTime * 0.3) * 0.2;
+              shader.uniforms['waveSpeed'].value = 0.5 + Math.sin(this.animationTime * 0.3) * 0.2;
             }
             
             if (shader.uniforms['colorIntensity']) {
-              shader.uniforms['colorIntensity'].value = 0.3 + Math.sin(currentTime * 0.4) * 0.2;
+              shader.uniforms['colorIntensity'].value = 0.3 + Math.sin(this.animationTime * 0.4) * 0.2;
             }
             
             if (shader.uniforms['veinIntensity']) {
-              shader.uniforms['veinIntensity'].value = 0.8 + Math.sin(currentTime * 0.4) * 0.3;
+              shader.uniforms['veinIntensity'].value = 0.8 + Math.sin(this.animationTime * 0.4) * 0.3;
             }
             
             if (shader.uniforms['veinThickness']) {
-              shader.uniforms['veinThickness'].value = 0.1 + Math.sin(currentTime * 0.5) * 0.05;
+              shader.uniforms['veinThickness'].value = 0.1 + Math.sin(this.animationTime * 0.5) * 0.05;
             }
           }
         }
@@ -733,8 +671,8 @@ export class NavbarThreeService implements OnDestroy {
     });
     
     // Debug moins fréquent
-    if (Math.floor(currentTime) % 10 === 0 && Math.floor(currentTime * 10) % 10 === 0) {
-      console.log('Bicouche shaders updated:', currentTime);
+    if (Math.floor(this.animationTime) % 10 === 0 && Math.floor(this.animationTime * 10) % 10 === 0) {
+      // Bicouche shaders updated
     }
   }
 
@@ -775,8 +713,6 @@ export class NavbarThreeService implements OnDestroy {
         // Si c'est le torus, appliquer un traitement spécial
         if (obj.name.includes('torus') || 
             (obj.parent && obj.parent.name && obj.parent.name.includes('torus'))) {
-          console.log('Torus trouvé, optimisation des ombres...');
-          
           // Ajuster sa position si nécessaire
           if (obj.position.y < 0.5) {
             obj.position.y += 0.5;
@@ -837,8 +773,6 @@ export class NavbarThreeService implements OnDestroy {
                            this.modelLoadingStatus.scene;
     
     if (allModelsLoaded) {
-      console.log('Tous les modèles sont chargés, démarrage des animations synchronisées');
-      
       // Attendre un peu pour s'assurer que tout est bien initialisé
       setTimeout(() => {
         // Réinitialiser et jouer toutes les animations
@@ -846,6 +780,8 @@ export class NavbarThreeService implements OnDestroy {
           action.reset();
           action.setLoop(THREE.LoopRepeat, Infinity);
           action.clampWhenFinished = false;
+          action.time = 0; // Réinitialiser le temps à 0 pour éviter les sauts
+          action.enabled = true;
           action.play();
         });
         
@@ -866,6 +802,9 @@ export class NavbarThreeService implements OnDestroy {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
+    
+    // Réinitialiser le temps d'animation
+    this.animationTime = 0;
     
     // Arrêter tous les mixers d'animation
     for (const mixer of this.mixers) {

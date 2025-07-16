@@ -10,18 +10,6 @@
   <div class="light-settings-panel" [class.show]="isLightControlsOpen">
     <div class="panel-header">
       <h6 class="text-white mb-0">Paramètres d'éclairage</h6>
-      <div class="tab-selector">
-        <button class="tab-button" 
-               [class.active]="activeTab === 'navbar'"
-               (click)="setActiveTab('navbar')">
-          Navbar
-        </button>
-        <button class="tab-button" 
-               [class.active]="activeTab === 'background'"
-               (click)="setActiveTab('background')">
-          Fond
-        </button>
-      </div>
       <button class="btn-close-panel" (click)="toggleLightControls($event)">
         <i class="fas fa-times"></i>
       </button>

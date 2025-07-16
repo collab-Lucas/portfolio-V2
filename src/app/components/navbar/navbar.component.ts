@@ -22,18 +22,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
       <!-- Panneau de contrôle des lumières -->
       <div class="light-settings-panel" [class.show]="isLightControlsOpen">
         <div class="panel-header">
-          <h6 class="text-white mb-0">Paramètres d'éclairage</h6>          <div class="tab-selector">
-            <button class="tab-button" 
-                   [class.active]="activeTab === 'navbar'"
-                   (click)="setActiveTab('navbar')">
-              Navbar
-            </button>
-            <button class="tab-button" 
-                   [class.active]="activeTab === 'background'"
-                   (click)="setActiveTab('background')">
-              Fond
-            </button>
-          </div>          <button class="btn-close-panel" (click)="toggleLightControls($event)">
+          <h6 class="text-white mb-0">Paramètres d'éclairage</h6>          <button class="btn-close-panel" (click)="toggleLightControls($event)">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -1284,7 +1273,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   private currentShrinkState = true; // Cache pour l'état actuel
 
   showLightSettings: boolean = false;
-  activeTab: 'navbar' | 'background' = 'navbar';// Définition des valeurs d'initialisation des lumières spécifiques
+  activeTab: 'navbar' = 'navbar';// Définition des valeurs d'initialisation des lumières spécifiques
   private initialLightValues = {
     'Lumière ambiante': 0.4,
     'Lumière directionnelle': 0.05,
@@ -1331,14 +1320,12 @@ export class NavbarComponent implements OnInit, OnDestroy {
     const savedState = localStorage.getItem('navbarState');
     if (savedState) {
       const savedShrinkState = JSON.parse(savedState);
-      console.log('Restauration état navbar:', savedShrinkState);
       // Appliquer l'état sauvegardé au service NavbarEffects
       setTimeout(() => {
         this.navbarEffects.setNavbarState(savedShrinkState);
       }, 100);
     } else {
       // Si aucun état sauvegardé, utiliser l'état par défaut (navbar rétractée)
-      console.log('Aucun état sauvegardé, utilisation de l\'état par défaut');
       setTimeout(() => {
         this.navbarEffects.setNavbarState(true);
       }, 100);
@@ -1348,7 +1335,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       // S'assurer que le canvas est prêt
       if (this.navbarCanvas && this.navbarCanvas.nativeElement) {
-        console.log('Initialisation de la navbar 3D');
         this.threeService.initNavbar(this.navbarCanvas.nativeElement);
         
         // Appeler onResize une fois au démarrage pour gérer la largeur initiale
@@ -1405,7 +1391,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
         }
       });
       
-      console.log('Lumières initialisées avec les valeurs par défaut');
     }, 500); // Délai pour s'assurer que toutes les lumières sont chargées
   }
 
@@ -1599,9 +1584,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
   
   /**
    * Change d'onglet et actualise les lumières
-   * @param tab Onglet à activer ('navbar' ou 'background')
+   * @param tab Onglet à activer ('navbar')
    */
-  setActiveTab(tab: 'navbar' | 'background') {
+  setActiveTab(tab: 'navbar') {
     this.activeTab = tab;
     this.threeService.setActiveTab(tab);
   }
@@ -1739,13 +1724,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }
     
     // Faire le toggle et obtenir le nouvel état
-    console.log('Toggle navbar - état actuel:', this.currentShrinkState);
     this.navbarEffects.toggleNavbar();
     
     // Attendre que le toggle soit effectué pour sauvegarder le nouvel état
     setTimeout(() => {
       const newState = this.currentShrinkState;
-      console.log('Sauvegarde nouvel état:', newState);
       localStorage.setItem('navbarState', JSON.stringify(newState));
     }, 50);
     
