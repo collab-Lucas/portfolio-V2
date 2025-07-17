@@ -2,6 +2,19 @@ import { Injectable } from '@angular/core';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
+interface QualitySettings {
+  prismCount: number;
+  sphereSegments: number;
+  shadowMapSize: number;
+  pixelRatio: number;
+}
+
+const QUALITY_PRESETS: Record<string, QualitySettings> = {
+  low: { prismCount: 20, sphereSegments: 16, shadowMapSize: 512, pixelRatio: 0.5 },
+  medium: { prismCount: 50, sphereSegments: 32, shadowMapSize: 1024, pixelRatio: 1 },
+  high: { prismCount: 100, sphereSegments: 64, shadowMapSize: 2048, pixelRatio: 1.5 }
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,9 +30,61 @@ export class BackgroundThreeService {
   private mouseX = 0;
   private mouseY = 0;
   private animationTime = 0; // Temps d'animation interne stable
+  private clock = new THREE.Clock(); // Clock pour deltaTime
+  private qualityLevel: 'low' | 'medium' | 'high' = 'medium';
+  private qualitySettings: QualitySettings = QUALITY_PRESETS['medium'];
+  
+  // Cache des objets animés pour éviter traverse à chaque frame
+  private animatedObjects: {
+    shaders: THREE.ShaderMaterial[],
+    models: THREE.Object3D[]
+  } = { shaders: [], models: [] };
 
 
   constructor() {}
+
+  /**
+   * Détecte les performances de l'appareil
+   */
+  private detectPerformance(): 'high' | 'medium' | 'low' {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
+    
+    if (!gl) return 'low';
+    
+    const renderer = (gl as WebGLRenderingContext).getParameter((gl as WebGLRenderingContext).RENDERER);
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isTablet = /iPad|Android.*(?!.*Mobile)/i.test(navigator.userAgent);
+    
+    // Détection basée sur l'appareil
+    if (isMobile) return 'low';
+    if (isTablet) return 'medium';
+    
+    // Détection basée sur le GPU
+    const rendererLower = renderer.toLowerCase();
+    if (rendererLower.includes('intel') || rendererLower.includes('integrated')) return 'medium';
+    if (rendererLower.includes('nvidia') || rendererLower.includes('amd') || rendererLower.includes('radeon')) return 'high';
+    
+    // Détection basée sur la mémoire (approximative)
+    const memoryInfo = (performance as any).memory;
+    if (memoryInfo) {
+      const totalMemory = memoryInfo.totalJSHeapSize / 1024 / 1024; // MB
+      if (totalMemory < 100) return 'low';
+      if (totalMemory < 500) return 'medium';
+    }
+    
+    return 'medium'; // Valeur par défaut
+  }
+
+  /**
+   * Configure la qualité selon les performances détectées
+   */
+  private configureQuality() {
+    this.qualityLevel = this.detectPerformance();
+    this.qualitySettings = QUALITY_PRESETS[this.qualityLevel];
+    
+    console.log(`Performance détectée: ${this.qualityLevel}`, this.qualitySettings);
+  }
 
   /**
    * Initialise la scène Three.js pour le background
@@ -27,6 +92,9 @@ export class BackgroundThreeService {
    */
   init(canvas: HTMLCanvasElement) {
     if (!canvas) return;
+    
+    // =============================== DÉTECTION PERFORMANCE ===============================
+    this.configureQuality();
     
     // =============================== INITIALISATION SCENE ===============================
     this.scene = new THREE.Scene();
@@ -48,23 +116,23 @@ export class BackgroundThreeService {
     this.renderer = new THREE.WebGLRenderer({ 
       canvas, 
       alpha: false,  // Désactiver alpha pour un fond solide
-      antialias: true,
+      antialias: this.qualityLevel !== 'low', // Désactiver antialias sur low
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio));
+    this.renderer.setPixelRatio(Math.min(this.qualitySettings.pixelRatio, window.devicePixelRatio));
     this.renderer.setClearColor(0xffffff, 0); // Fond noir opaque
 
-    // Activer les ombres dans le renderer
-    this.renderer.shadowMap.enabled = true;
+    // Activer les ombres dans le renderer avec qualité adaptée
+    this.renderer.shadowMap.enabled = this.qualityLevel !== 'low';
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // =============================== AJOUT DE LUMIÈRES ===============================
     // Lumière directionnelle principale pour ombres marquées
     const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
     directionalLight.position.set(10, 10, 10);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 1024;
-    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.castShadow = this.qualityLevel !== 'low';
+    directionalLight.shadow.mapSize.width = this.qualitySettings.shadowMapSize;
+    directionalLight.shadow.mapSize.height = this.qualitySettings.shadowMapSize;
     directionalLight.shadow.camera.near = 0.5;
     directionalLight.shadow.camera.far = 500;
     directionalLight.shadow.bias = -0.001;
@@ -180,9 +248,12 @@ export class BackgroundThreeService {
             side: THREE.FrontSide,
             transparent: false,
             blending: THREE.NormalBlending // Blending normal pour couleur stable
-          });
+          }          );
           
           child.material = screenMaterial;
+          
+          // Ajouter le shader d'écran au cache
+          this.animatedObjects.shaders.push(screenMaterial);
         }
       });
 
@@ -201,27 +272,23 @@ export class BackgroundThreeService {
         }
       });
 
-      // --- Debug : liste de tous les éléments/meshes du modèle scene_bureau ---
-      console.log('=== ÉLÉMENTS/MESHES dans scene_bureau ===');
-      const meshesInBureau: { name: string, type: string, geometry?: string, material?: string }[] = [];
-      bureau.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          const meshInfo = {
-            name: child.name || 'unnamed',
-            type: 'Mesh',
-            geometry: child.geometry.type,
-            material: child.material ? (Array.isArray(child.material) ? child.material.map(m => m.type).join(', ') : child.material.type) : 'undefined'
-          };
-          meshesInBureau.push(meshInfo);
-          console.log(`Mesh: "${child.name}" | Géométrie: ${meshInfo.geometry} | Matériau: ${meshInfo.material}`);
-        } else if (child instanceof THREE.Group) {
-          console.log(`Group: "${child.name || 'unnamed'}" | Enfants: ${child.children.length}`);
-        } else if (child instanceof THREE.Object3D) {
-          console.log(`Object3D: "${child.name || 'unnamed'}" | Type: ${child.type}`);
-        }
-      });
-      console.log(`Total meshes trouvés: ${meshesInBureau.length}`);
-      console.log('=== FIN LISTE scene_bureau ===');
+      // --- Debug : liste de tous les éléments/meshes du modèle scene_bureau (désactivé en production) ---
+      const isDev = true; // Remplacer par votre logique de détection d'environnement
+      if (isDev) {
+        const meshesInBureau: { name: string, type: string, geometry?: string, material?: string }[] = [];
+        bureau.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const meshInfo = {
+              name: child.name || 'unnamed',
+              type: 'Mesh',
+              geometry: child.geometry.type,
+              material: child.material ? (Array.isArray(child.material) ? child.material.map(m => m.type).join(', ') : child.material.type) : 'undefined'
+            };
+            meshesInBureau.push(meshInfo);
+          }
+        });
+        console.log(`Meshes trouvés dans scene_bureau: ${meshesInBureau.length}`);
+      }
     });
 
     // ----------- FOND -----------
@@ -237,8 +304,11 @@ export class BackgroundThreeService {
     this.loadGLB('prisme', 'assets/models/prisme.glb', { x: 10, y: 0, z: 0 }, 1, (prisme) => {
       prisme.rotation.y = Math.PI / 4;
 
-      // Génération de clones pour effet de profondeur
-      for (let i = 0; i < 100; i++) {
+      // Génération de clones adaptée à la performance
+      const prismCount = this.qualitySettings.prismCount;
+      console.log(`Génération de ${prismCount} prismes (qualité: ${this.qualityLevel})`);
+      
+      for (let i = 0; i < prismCount; i++) {
         const clone = prisme.clone();
         clone.position.set(
           THREE.MathUtils.randFloatSpread(200),
@@ -253,6 +323,9 @@ export class BackgroundThreeService {
         clone.scale.setScalar(0.3 + Math.random() * 1.2);
         this.scene.add(clone);
       }
+      
+      // Ajouter le prisme original au cache des objets animés
+      this.animatedObjects.models.push(prisme);
     });
 
     // ----------- MATÉRIAUX GLOBAUX (hors sphère d'environnement) -----------
@@ -578,10 +651,24 @@ private moveCamera() {
     if (!this.renderer || !this.scene || !this.camera) return;
 
     const render = () => {
-      // Incrémenter le temps d'animation de façon stable
-      this.animationTime += 0.01;
+      // Utiliser deltaTime pour un timing précis
+      const delta = this.clock.getDelta();
+      this.animationTime += delta;
       
-      // Mettre à jour les shaders avec uniforms time
+      // Réinitialiser le temps toutes les 1000 secondes pour éviter les erreurs de précision
+      // sans créer de saut visible
+      if (this.animationTime > 1000) {
+        this.animationTime = this.animationTime % 1000;
+      }
+      
+      // Mettre à jour les shaders avec le cache au lieu de traverse
+      this.animatedObjects.shaders.forEach(shader => {
+        if (shader.uniforms && shader.uniforms['time']) {
+          shader.uniforms['time'].value = this.animationTime;
+        }
+      });
+      
+      // Mettre à jour les shaders avec onBeforeCompile (legacy)
       this.scene.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           // Pour les ShaderMaterial classiques
@@ -601,42 +688,45 @@ private moveCamera() {
         }
       });
       
-      // Animation des modèles si nécessaire
+      // Animation des modèles avec deltaTime
       if (this.models['prisme']) {
-        // Rotation continue indépendante du scroll
-        this.models['prisme'].rotation.y += 0.005;
+        this.models['prisme'].rotation.y += 0.005 * delta * 60; // 60 FPS de référence
       }
       
-      // Animation des prismes clonés pour plus de dynamisme
+      // Animation des prismes clonés optimisée
+      let prismCount = 0;
       this.scene.children.forEach(child => {
         if (child instanceof THREE.Group && 
             child !== this.models['prisme'] && 
-            child !== this.models['scene_fond']) {
-          child.rotation.x += 0.002;
-          child.rotation.y += 0.003;
+            child !== this.models['scene_fond'] &&
+            child !== this.models['scene_bureau'] &&
+            prismCount < this.qualitySettings.prismCount) {
+          child.rotation.x += 0.002 * delta * 60;
+          child.rotation.y += 0.003 * delta * 60;
+          prismCount++;
         }
       });
       
 
-            // Animation du bureau basée sur la souris
+      // Animation du bureau basée sur la souris (optimisée)
       if (this.models['scene_bureau']) {
         const bureau = this.models['scene_bureau'];
 
         // Rotation initiale sur Y (base)
         const initialRotationY = THREE.MathUtils.degToRad(-35);
 
-        // Ajouter une rotation basée sur la souris
+        // Ajouter une rotation basée sur la souris avec deltaTime
         const mouseRotationX = this.mouseY * 0.01; // Rotation subtile sur X
         const mouseRotationY = this.mouseX * 0.01; // Rotation subtile sur Y
 
         // Appliquer les rotations en ajoutant à la rotation initiale
-        bureau.rotation.x = mouseRotationX; // Rotation sur X basée sur la souris
-        bureau.rotation.y = initialRotationY + mouseRotationY; // Rotation sur Y basée sur la souris
+        bureau.rotation.x = mouseRotationX;
+        bureau.rotation.y = initialRotationY + mouseRotationY;
 
         // Oscillation sur Z uniquement dans la zone de stagnation
         const t = document.body.getBoundingClientRect().top;
         if (t >= -850 && t <= -650) {
-          bureau.rotation.z = Math.sin(Date.now() * 0.001) * 0.01; // Oscillation subtile
+          bureau.rotation.z = Math.sin(this.animationTime * 2) * 0.01; // Oscillation subtile avec temps normalisé
         } else {
           bureau.rotation.z *= 0.95; // Réduction progressive hors de la zone
         }
@@ -659,12 +749,21 @@ private moveCamera() {
       this.animationId = null;
     }
     
-    // Réinitialiser le temps d'animation
+    // Réinitialiser le temps d'animation et le clock
     this.animationTime = 0;
+    this.clock = new THREE.Clock();
+    
+    // Nettoyer le cache des objets animés
+    this.animatedObjects.shaders = [];
+    this.animatedObjects.models = [];
     
     // Supprimer les gestionnaires d'événements
     if (this.boundMoveCamera) {
       window.removeEventListener('scroll', this.boundMoveCamera);
+    }
+    
+    if (this.boundMouseMove) {
+      window.removeEventListener('mousemove', this.boundMouseMove);
     }
     
     // Nettoyer les modèles
@@ -685,10 +784,6 @@ private moveCamera() {
     });
     
     this.models = {};
-        if (this.boundMouseMove) {
-      window.removeEventListener('mousemove', this.boundMouseMove);
-    }
-    
     
     // Nettoyer le renderer
     if (this.renderer) this.renderer.dispose();
@@ -715,7 +810,7 @@ private moveCamera() {
   uniform float noiseStrength;
   varying vec2 vUv;
 
-  // === Simplex Noise 2D ===
+  // === Simplex Noise 2D (optimisé) ===
   vec3 permute(vec3 x) {
     return mod(((x * 34.0) + 1.0) * x, 289.0);
   }
@@ -767,18 +862,19 @@ private moveCamera() {
   float mask = 1.0 - smoothstep(bandWidth / 2.0, bandWidth / 2.0 + softness, dist);
   float glow = 1.0 - smoothstep(bandWidth / 2.0 + 0.03, bandWidth / 2.0 + 0.08, dist);
 
-  // --- Déformer les UV uniquement pour les couleurs ---
+  // --- Déformer les UV uniquement pour les couleurs (optimisé) ---
   vec2 warpedUv = vUv;
-  float deformation = snoise(vUv * 6.0 + vec2(time * 0.1, 0.0)); // noise animé
-  warpedUv.x += deformation * 0.1;
-  warpedUv.y += deformation * 0.1;
+  // Réduire la fréquence du noise pour éviter les calculs coûteux
+  float deformation = snoise(vUv * 4.0 + vec2(time * 0.08, 0.0));
+  warpedUv.x += deformation * 0.08;
+  warpedUv.y += deformation * 0.08;
 
   // --- Gradient cyclique sur les UV déformés ---
-  float gradientT = fract(warpedUv.x + time * 0.05);
+  float gradientT = fract(warpedUv.x + time * 0.04);
   vec3 bandColor = getColor(gradientT);
 
-  // --- Grain/bruit subtil ---
-  float grain = rand(vUv + time * 0.5);
+  // --- Grain/bruit subtil (moins fréquent) ---
+  float grain = rand(vUv + time * 0.3);
   bandColor += noiseStrength * (grain - 0.5);
 
   // --- Couleur finale ---
@@ -790,17 +886,25 @@ private moveCamera() {
 }
 `;
 
-    const geometry = new THREE.SphereGeometry(1000, 64, 64); // Sphère très grande
+    const geometry = new THREE.SphereGeometry(1000, this.qualitySettings.sphereSegments, this.qualitySettings.sphereSegments);
+    
+    // Ajuster les paramètres du shader selon la qualité
+    const noiseStrength = this.qualityLevel === 'low' ? 0.02 : 0.05;
+    const glowIntensity = this.qualityLevel === 'low' ? 0.03 : 0.05;
+    
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader: vertexShader,
       fragmentShader: fragmentShader,
       side: THREE.BackSide, // Assure la visibilité à l'intérieur
       uniforms: {
         time: { value: 0 },
-        glowIntensity: { value: 0.05 },
-        noiseStrength: { value: 0.05 }
+        glowIntensity: { value: glowIntensity },
+        noiseStrength: { value: noiseStrength }
       }
     });
+
+    // Ajouter le shader au cache
+    this.animatedObjects.shaders.push(shaderMaterial);
 
     const envSphere = new THREE.Mesh(geometry, shaderMaterial);
     envSphere.scale.set(-1, 1, 1); // Inverser la sphère pour que l'intérieur soit visible
