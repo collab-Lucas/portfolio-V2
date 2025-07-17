@@ -583,11 +583,19 @@ export class LightService {
     pointLightIntensity?: number,
     includeDirectional?: boolean,
     includePoint?: boolean,
+    includeSpotBD?: boolean,
+    includeSpotHD?: boolean,
+    includeSpotRouge?: boolean,
+    includeSun?: boolean,
     shadowQuality?: 'low' | 'medium' | 'high'
   }): {
     ambient: THREE.AmbientLight,
     directional?: THREE.DirectionalLight,
-    point?: THREE.PointLight
+    point?: THREE.PointLight,
+    spotBD?: THREE.SpotLight,
+    spotHD?: THREE.SpotLight,
+    spotRouge?: THREE.SpotLight,
+    sun?: THREE.DirectionalLight
   } {
     const color = options.color || '#ffffff';
     const result: {

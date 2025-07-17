@@ -134,9 +134,14 @@ export class NavbarThreeService implements OnDestroy {
     const lights = this.lightService.createStandardLightSet(this.navbarScene, {
       sceneType: 'navbar',
       color: '#ffffff',
-      ambientIntensity: 0.5,
-      directionalIntensity: 0.8,
-      includePoint: false,
+      ambientIntensity: 0.1,
+      directionalIntensity: 0.15,
+      includePoint: true,
+      pointLightIntensity: 0.35,
+      includeSpotBD: true,
+      includeSpotHD: true,
+      includeSpotRouge: true,
+      includeSun: true,
       shadowQuality: this.lowQualityMode ? 'low' : 'high'
     });
     
