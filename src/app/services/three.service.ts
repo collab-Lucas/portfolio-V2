@@ -152,6 +152,14 @@ export class ThreeService {
     this.lightService.setLightCastShadow(lightName, castShadow);
   }
 
+  /**
+   * Log détaillé de toutes les lumières avec leurs propriétés complètes
+   * Utile pour analyser les lumières importées et leurs valeurs problématiques
+   */
+  logAllLightsDetailed(): void {
+    this.lightService.logAllLightsDetailed();
+  }
+
   // Méthodes de compatibilité pour l'ancienne API
   
   setAmbientLightIntensity(intensity: number): void {
@@ -184,6 +192,14 @@ export class ThreeService {
   
   setBackgroundLightColor(color: string): void {
     this.setLightColor('Lumière de fond', color);
+  }
+
+  /**
+   * Crée un ensemble complet de lumières optimisées pour la navbar
+   * Remplace les lumières importées par des lumières générées en code avec intensités normalisées
+   */
+  createOptimizedNavbarLights(scene: THREE.Scene) {
+    return this.lightService.createOptimizedNavbarLights(scene);
   }
 
   /**

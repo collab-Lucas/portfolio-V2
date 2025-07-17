@@ -765,4 +765,249 @@ export class LightService {
     const { color = 0xffffff, intensity = 1 } = options;
     return new THREE.AmbientLight(color, intensity);
   }
+
+  /**
+   * Log détaillé de toutes les lumières dans toutes les scènes enregistrées
+   * Affiche toutes les propriétés utiles pour recréer les lumières en code
+   */
+  logAllLightsDetailed(): void {
+    console.log('=== LOG DÉTAILLÉ DE TOUTES LES LUMIÈRES ===');
+    
+    this.sceneRefs.forEach(({ scene, type }) => {
+      console.log(`\n🎬 SCÈNE: ${type.toUpperCase()}`);
+      console.log('─'.repeat(50));
+      
+      let lightCount = 0;
+      scene.traverse(obj => {
+        if (obj instanceof THREE.Light) {
+          lightCount++;
+          
+          // Informations de base
+          console.log(`\n💡 Lumière #${lightCount}: ${obj.name || 'Sans nom'}`);
+          console.log(`   Type: ${this.getLightType(obj)}`);
+          console.log(`   Intensité: ${this.getLightIntensity(obj)}`);
+          console.log(`   Couleur: ${this.getLightColor(obj)}`);
+          console.log(`   Visible: ${obj.visible}`);
+          console.log(`   Cast Shadow: ${this.getLightCastShadow(obj)}`);
+          
+          // Position (pour les lumières qui en ont une)
+          if ('position' in obj) {
+            const pos = (obj as any).position;
+            console.log(`   Position: x=${pos.x.toFixed(3)}, y=${pos.y.toFixed(3)}, z=${pos.z.toFixed(3)}`);
+          }
+          
+          // Rotation (pour les lumières qui en ont une)
+          if ('rotation' in obj) {
+            const rot = (obj as any).rotation;
+            console.log(`   Rotation: x=${rot.x.toFixed(3)}, y=${rot.y.toFixed(3)}, z=${rot.z.toFixed(3)}`);
+          }
+          
+          // Propriétés spécifiques selon le type
+          if (obj instanceof THREE.DirectionalLight) {
+            const target = obj.target;
+            console.log(`   Target position: x=${target.position.x.toFixed(3)}, y=${target.position.y.toFixed(3)}, z=${target.position.z.toFixed(3)}`);
+          } else if (obj instanceof THREE.PointLight) {
+            console.log(`   Distance: ${obj.distance}`);
+            console.log(`   Decay: ${obj.decay}`);
+          } else if (obj instanceof THREE.SpotLight) {
+            console.log(`   Distance: ${obj.distance}`);
+            console.log(`   Angle: ${obj.angle.toFixed(3)} rad (${(obj.angle * 180 / Math.PI).toFixed(1)}°)`);
+            console.log(`   Penumbra: ${obj.penumbra}`);
+            console.log(`   Decay: ${obj.decay}`);
+            const target = obj.target;
+            console.log(`   Target position: x=${target.position.x.toFixed(3)}, y=${target.position.y.toFixed(3)}, z=${target.position.z.toFixed(3)}`);
+          }
+          
+          // Informations sur les ombres
+          if (obj.castShadow && obj.shadow) {
+            console.log(`   Shadow map size: ${obj.shadow.mapSize.width}x${obj.shadow.mapSize.height}`);
+            if (obj.shadow.camera) {
+              if (obj.shadow.camera instanceof THREE.OrthographicCamera) {
+                const cam = obj.shadow.camera;
+                console.log(`   Shadow camera (ortho): left=${cam.left}, right=${cam.right}, top=${cam.top}, bottom=${cam.bottom}, near=${cam.near}, far=${cam.far}`);
+              } else if (obj.shadow.camera instanceof THREE.PerspectiveCamera) {
+                const cam = obj.shadow.camera;
+                console.log(`   Shadow camera (persp): fov=${cam.fov}, near=${cam.near}, far=${cam.far}`);
+              }
+            }
+            console.log(`   Shadow bias: ${obj.shadow.bias}`);
+          }
+          
+          // Code pour recréer cette lumière
+          console.log(`   📝 CODE POUR RECRÉER:`);
+          console.log(this.generateLightCreationCode(obj, type));
+          console.log('   ' + '─'.repeat(40));
+        }
+      });
+      
+      if (lightCount === 0) {
+        console.log('   Aucune lumière trouvée dans cette scène');
+      } else {
+        console.log(`\n   Total: ${lightCount} lumière(s) dans la scène ${type}`);
+      }
+    });
+    
+    console.log('\n=== FIN DU LOG DES LUMIÈRES ===');
+  }
+
+  /**
+   * Génère le code TypeScript pour recréer une lumière
+   */
+  private generateLightCreationCode(light: THREE.Light, sceneType: string): string {
+    const intensity = this.getLightIntensity(light);
+    const color = this.getLightColor(light);
+    const name = light.name || 'unnamed_light';
+    
+    let code = '';
+    
+    if (light instanceof THREE.AmbientLight) {
+      code = `const ${name.replace(/\s+/g, '_').toLowerCase()} = new THREE.AmbientLight('${color}', ${intensity});`;
+    } else if (light instanceof THREE.DirectionalLight) {
+      const pos = light.position;
+      const target = light.target.position;
+      code = `const ${name.replace(/\s+/g, '_').toLowerCase()} = new THREE.DirectionalLight('${color}', ${intensity});
+      ${name.replace(/\s+/g, '_').toLowerCase()}.position.set(${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)});
+      ${name.replace(/\s+/g, '_').toLowerCase()}.target.position.set(${target.x.toFixed(3)}, ${target.y.toFixed(3)}, ${target.z.toFixed(3)});`;
+    } else if (light instanceof THREE.PointLight) {
+      const pos = light.position;
+      code = `const ${name.replace(/\s+/g, '_').toLowerCase()} = new THREE.PointLight('${color}', ${intensity}, ${light.distance}, ${light.decay});
+      ${name.replace(/\s+/g, '_').toLowerCase()}.position.set(${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)});`;
+    } else if (light instanceof THREE.SpotLight) {
+      const pos = light.position;
+      const target = light.target.position;
+      code = `const ${name.replace(/\s+/g, '_').toLowerCase()} = new THREE.SpotLight('${color}', ${intensity}, ${light.distance}, ${light.angle.toFixed(3)}, ${light.penumbra}, ${light.decay});
+      ${name.replace(/\s+/g, '_').toLowerCase()}.position.set(${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)});
+      ${name.replace(/\s+/g, '_').toLowerCase()}.target.position.set(${target.x.toFixed(3)}, ${target.y.toFixed(3)}, ${target.z.toFixed(3)});`;
+    }
+    
+    if (light.castShadow) {
+      code += `\n      ${name.replace(/\s+/g, '_').toLowerCase()}.castShadow = true;`;
+    }
+    
+    code += `\n      ${name.replace(/\s+/g, '_').toLowerCase()}.name = '${name}';`;
+    code += `\n      scene.add(${name.replace(/\s+/g, '_').toLowerCase()});`;
+    
+    return code;
+  }
+
+  /**
+   * Crée un ensemble complet de lumières optimisées pour la navbar
+   * Basé sur l'analyse des lumières importées mais avec intensités normalisées à 1.0
+   * @param scene La scène où ajouter les lumières
+   * @returns Les objets de lumière créés
+   */
+  createOptimizedNavbarLights(scene: THREE.Scene): {
+    ambient: THREE.AmbientLight,
+    directional: THREE.DirectionalLight,
+    point: THREE.PointLight,
+    spotBD: THREE.SpotLight,
+    spotHD: THREE.SpotLight,
+    spotPrincipal: THREE.SpotLight,
+    spotRouge: THREE.SpotLight,
+    sun: THREE.DirectionalLight
+  } {
+    console.log('🔧 Création des lumières optimisées pour la navbar...');
+
+    // ÉTAPE 1: Supprimer toutes les lumières existantes importées depuis les modèles GLTF
+    console.log('🗑️ Suppression des lumières importées existantes...');
+    const lightsToRemove: THREE.Light[] = [];
+    scene.traverse(obj => {
+      if (obj instanceof THREE.Light) {
+        lightsToRemove.push(obj);
+      }
+    });
+
+    lightsToRemove.forEach(light => {
+      console.log(`   Suppression de: ${light.name || 'Lumière sans nom'} (${light.type})`);
+      scene.remove(light);
+    });
+
+    console.log(`✅ ${lightsToRemove.length} lumières importées supprimées`);
+
+    // ÉTAPE 2: Créer les nouvelles lumières optimisées avec intensités normalisées
+    console.log('🔧 Création des nouvelles lumières optimisées...');
+
+    // Création des lumières optimisées
+    const ambient = new THREE.AmbientLight('#ffffff', 1.0);
+    ambient.name = 'Lumière ambiante';
+    scene.add(ambient);
+
+    const directional = new THREE.DirectionalLight('#ffffff', 1.0);
+    directional.position.set(-5.000, 15.000, 10.000);
+    directional.target.position.set(0.000, 0.000, 0.000);
+    directional.castShadow = true;
+    directional.name = 'Lumière directionnelle';
+    this.configureShadowsForLight(directional);
+    scene.add(directional);
+
+    const point = new THREE.PointLight('#ffffff', 1.0, 0, 2);
+    point.position.set(0.000, 0.000, 2.000);
+    point.castShadow = true;
+    point.name = 'Lumière ponctuelle';
+    this.configureShadowsForLight(point);
+    scene.add(point);
+
+    const spotBD = new THREE.SpotLight('#fff8f2', 1.0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
+    spotBD.position.set(-79.931, 12.193, 5.648);
+    spotBD.target.position.set(0.000, 0.000, -1.000);
+    spotBD.castShadow = true;
+    spotBD.name = 'SpotBD';
+    this.configureShadowsForLight(spotBD);
+    scene.add(spotBD);
+
+    const spotHD = new THREE.SpotLight('#fff8f2', 1.0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
+    spotHD.position.set(-61.144, 12.193, 46.533);
+    spotHD.target.position.set(0.000, 0.000, -1.000);
+    spotHD.castShadow = true;
+    spotHD.name = 'SpotHD';
+    this.configureShadowsForLight(spotHD);
+    scene.add(spotHD);
+
+    const spotPrincipal = new THREE.SpotLight('#fff8f2', 1.0, 99.98999786376953, 1.571, 1, 2);
+    spotPrincipal.position.set(1.642, 12.590, -8.854);
+    spotPrincipal.target.position.set(0.000, 0.000, -1.000);
+    spotPrincipal.castShadow = true;
+    spotPrincipal.name = 'Spotprincipal';
+    this.configureShadowsForLight(spotPrincipal);
+    scene.add(spotPrincipal);
+
+    const spotRouge = new THREE.SpotLight('#ff0009', 1.0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
+    spotRouge.position.set(20.210, 12.193, 5.512);
+    spotRouge.target.position.set(0.000, 0.000, -1.000);
+    spotRouge.castShadow = true;
+    spotRouge.name = 'Spotrouge';
+    this.configureShadowsForLight(spotRouge);
+    scene.add(spotRouge);
+
+    const sun = new THREE.DirectionalLight('#ffffff', 1.0);
+    sun.position.set(0.000, 20.903, 0.000);
+    sun.target.position.set(0.000, 0.000, -1.000);
+    sun.castShadow = true;
+    sun.name = 'Sun';
+    this.configureShadowsForLight(sun);
+    scene.add(sun);
+
+    console.log('✅ 8 nouvelles lumières optimisées créées avec succès !');
+
+    // ÉTAPE 3: Enregistrer la scène et actualiser la liste
+    this.registerScene(scene, 'navbar');
+
+    // Actualiser la liste des lumières
+    this.refreshLights([{ scene, type: 'navbar' }]);
+
+    console.log('🎯 Système de lumières optimisé finalisé - Plus besoin de charger navbar_scene.glb !');
+
+    // Retourner uniquement les lumières créées
+    return {
+      ambient,
+      directional,
+      point,
+      spotBD,
+      spotHD,
+      spotPrincipal,
+      spotRouge,
+      sun
+    };
+  }
+  
 }

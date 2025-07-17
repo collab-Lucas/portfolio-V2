@@ -130,24 +130,13 @@ export class NavbarThreeService implements OnDestroy {
    * Configure les lumières pour la navbar
    */
   private setupLights() {
-    // Utiliser le LightService pour créer un ensemble standard de lumières
-    const lights = this.lightService.createStandardLightSet(this.navbarScene, {
-      sceneType: 'navbar',
-      color: '#ffffff',
-      ambientIntensity: 0.1,
-      directionalIntensity: 0.15,
-      includePoint: true,
-      pointLightIntensity: 0.35,
-      includeSpotBD: true,
-      includeSpotHD: true,
-      includeSpotRouge: true,
-      includeSun: true,
-      shadowQuality: this.lowQualityMode ? 'low' : 'high'
-    });
+    // Utiliser notre nouveau système de lumières optimisées créées directement en code
+    // Au lieu d'importer les lumières depuis une scène, on les crée avec leurs propriétés exactes
+    const lights = this.lightService.createOptimizedNavbarLights(this.navbarScene);
     
     // Stocker les références aux lumières principales
     this.ambientLight = lights.ambient;
-    this.directionalLight = lights.directional!;
+    this.directionalLight = lights.directional;
     
     // Configuration supplémentaire pour la lumière directionnelle
     this.directionalLight.position.set(-5, 15, 10);

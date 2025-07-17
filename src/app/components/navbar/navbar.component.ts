@@ -1274,14 +1274,17 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   showLightSettings: boolean = false;
   activeTab: 'navbar' = 'navbar';// Définition des valeurs d'initialisation des lumières spécifiques
+  // Ces valeurs correspondent aux intensités originales des lumières importées
+  // mais maintenant appliquées sur des lumières créées directement en code avec intensité de base 1.0
   private initialLightValues = {
-    'Lumière ambiante': 0.4,
-    'Lumière directionnelle': 0.05,
-    'SpotBD': 0.5,
-    'SpotHD': 20.0,
-    'Spotprincipal': 100.0, 
-    'Spotrouge': 1000.0,
-    'Sun': 0.9
+    'Lumière ambiante': 0.4,          // Intensité originale: 0.4
+    'Lumière directionnelle': 0.05,   // Intensité originale: 0.05  
+    'Lumière ponctuelle': 0.35,       // Intensité originale: 0.35
+    'SpotBD': 0.5,                    // Intensité originale: 0.5
+    'SpotHD': 20.0,                   // Intensité originale: 20
+    'Spotprincipal': 100.0,           // Intensité originale: 100
+    'Spotrouge': 1000.0,              // Intensité originale: 1000
+    'Sun': 0.9                        // Intensité originale: 0.9
   };
 
   constructor(
@@ -1342,6 +1345,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
         
         // Charger la liste initiale des lumières
         this.updateLightsList();
+                
+        // LOG DÉTAILLÉ DE TOUTES LES LUMIÈRES (pour analyser les lumières importées)
+        setTimeout(() => {
+          console.log('🔍 ANALYSE DES LUMIÈRES IMPORTÉES:');
+          this.threeService.logAllLightsDetailed();
+        }, 1000); // Délai pour s'assurer que tout est chargé
+        
         
         // Initialiser les lumières avec les valeurs par défaut
         this.initializeLights();
