@@ -67,35 +67,36 @@ export class NavbarThreeService implements OnDestroy {
   /**
    * Initialise la scène Three.js pour la navbar
    */  
+  private setupRenderer(canvas: HTMLCanvasElement): THREE.WebGLRenderer {
+    return this.commonService.createRenderer(canvas, {
+      alpha: true,
+      antialias: !this.lowQualityMode,
+      precision: this.lowQualityMode ? 'lowp' : 'mediump',
+      powerPreference: 'high-performance',
+      shadowMapEnabled: true,
+      shadowMapType: THREE.PCFSoftShadowMap
+    });
+  }
+
+  private setupScene(): void {
+    this.navbarScene = this.commonService.setupScene();
+    this.navbarScene.background = null;
+  }
+
   initNavbar(canvas: HTMLCanvasElement, initialLightValues?: { [lightName: string]: number }) {
     if (!canvas) {
       console.error('Canvas non disponible pour initNavbar');
       return;
     }
-    
-    // Arrêter toute animation précédente
+
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-    
-    // Utiliser setupScene du CommonThreeService
-    this.navbarScene = this.commonService.setupScene();
-    this.navbarScene.background = null;
 
-    const CANVAS_HEIGHT = window.innerHeight;
-    
-    // Initialisation du renderer avec support des ombres
-    this.navbarRenderer = this.commonService.createRenderer(canvas, {
-      alpha: true,
-      antialias: !this.lowQualityMode,
-      precision: this.lowQualityMode ? 'lowp' : 'mediump',
-      powerPreference: 'high-performance', // Changé pour améliorer les performances
-      shadowMapEnabled: true,
-      shadowMapType: THREE.PCFSoftShadowMap
-    });
-    
-    this.navbarRenderer.setSize(window.innerWidth, CANVAS_HEIGHT);
+    this.setupScene();
+    this.navbarRenderer = this.setupRenderer(canvas);
+    this.navbarRenderer.setSize(window.innerWidth, window.innerHeight);
     this.navbarRenderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.navbarRenderer.toneMappingExposure = 1;
     this.navbarRenderer.setClearColor(0x000000, 0); // Fond transparent
@@ -103,7 +104,7 @@ export class NavbarThreeService implements OnDestroy {
     // Utiliser setupCamera du CommonThreeService
     this.navbarCamera = this.commonService.setupCamera({
       fov: 75,
-      aspect: window.innerWidth / CANVAS_HEIGHT,
+      aspect: window.innerWidth / window.innerHeight,
       near: 0.1,
       far: 1000,
       position: { x: 0, y: 0, z: 5 }

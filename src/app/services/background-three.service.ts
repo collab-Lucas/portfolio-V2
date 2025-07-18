@@ -1,4 +1,3 @@
-
 // Interface et presets qualité (à placer AVANT la classe)
 interface QualitySettings {
   prismCount: number;
@@ -83,10 +82,19 @@ export class BackgroundThreeService extends ThreeCoreService {
     this.setupEventListeners();
     this.loadModels();
     this.createEnvironment();
+    this.setupQualitySettings();
     this.animate();
     this.moveCamera();
-    
+
     this.initialized = true;
+  }
+
+  private setupQualitySettings(): void {
+    this.detectPerformanceLevel();
+    this.renderer.setPixelRatio(Math.min(this.qualitySettings.pixelRatio, window.devicePixelRatio));
+    if (this.qualitySettings.enableShadows) {
+      this.renderer.shadowMap.enabled = true;
+    }
   }
 
   // initializeScene hérité et adapté via ThreeCoreService
