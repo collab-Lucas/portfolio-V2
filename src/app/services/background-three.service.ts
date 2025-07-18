@@ -594,20 +594,26 @@ private setupEventListeners(): void {
    */
 private animate(): void {
   const render = () => {
-    // Utiliser un incrément fixe pour une animation stable
     this.animationTime += 0.01;
     if (this.animationTime > 1000) {
       this.animationTime = this.animationTime % 1000;
     }
     this.updateShaders();
-    this.animateObjects(0.01); // Utiliser le même incrément fixe
+    this.animateObjects(0.01);
 
     // Interpolation fluide de la caméra vers la cible
     const lerpSpeed = 0.08;
+    const prevPos = this.camera.position.clone();
+    const prevRotY = this.camera.rotation.y;
     this.camera.position.lerp(this.cameraTargetPosition, lerpSpeed);
     this.camera.rotation.y += (this.cameraTargetRotationY - this.camera.rotation.y) * lerpSpeed;
 
-    this.renderer.render(this.scene, this.camera);
+    // Rendu conditionnel : on ne rend que si la caméra a bougé ou needsUpdate
+    const cameraMoved = !this.camera.position.equals(prevPos) || this.camera.rotation.y !== prevRotY;
+    if (this.needsUpdate || cameraMoved) {
+      this.renderer.render(this.scene, this.camera);
+      this.needsUpdate = false;
+    }
     this.animationId = requestAnimationFrame(render);
   };
   render();
