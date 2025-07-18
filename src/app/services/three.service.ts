@@ -238,29 +238,7 @@ export class ThreeService {
   /**
    * Synchronise l'état enabled de toutes les lumières
    */
-  syncLightEnabledState(): void {
-    this.lightService.syncAllLightsEnabledState();
-  }
-
-  /**
-   * Synchronise l'état de toutes les lumières
-   */
   syncAllLightsEnabledState(): void {
     this.lightService.syncAllLightsEnabledState();
-  }
-
-  /**
-   * Cette méthode ne fait rien car l'animation est gérée dans les services spécialisés
-  /**
-   * @deprecated Cette méthode ne fait rien car l'animation est gérée dans les services spécialisés,
-   * mais est fournie pour la compatibilité avec l'ancienne API.
-   */
-  animate(): void {
-    // L'animation est maintenant gérée directement dans NavbarThreeService et BackgroundThreeService
-    // Cette méthode est fournie pour la compatibilité avec l'ancienne API
-  }
-
-  adjustCameraForNavbarState(isShrunk: boolean): void {
-    this.navbarService.adjustCameraForNavbarState(isShrunk);
   }
 }
