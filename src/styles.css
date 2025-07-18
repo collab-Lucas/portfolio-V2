@@ -60,3 +60,29 @@
   font-weight: bold;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
+
+/* Media queries optimisées */
+
+@media (max-width: 768px) {
+  .navbar {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .content {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .navbar {
+    justify-content: space-between;
+  }
+
+  .content {
+    padding: 20px;
+  }
+}
+
+/* Styles globaux pour les animations */
+@import url('./assets/css/animations.css');
