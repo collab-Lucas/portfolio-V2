@@ -43,6 +43,10 @@ export class LightService {
   private simpleLights: SimpleLight[] = [];
   private simpleLightsSubject = new BehaviorSubject<SimpleLight[]>([]);
   private sceneRefs: SceneReference[] = [];
+  // Nombre maximal de lumières pouvant projeter des ombres simultanément pour optimisation
+  private readonly MAX_SHADOW_CASTING_LIGHTS = 3;
+  private shadowCastingLights: Map<string, THREE.Light[]> = new Map(); // key: sceneType
+  
   constructor() {
     // Déclaration globale pour permettre l'accès depuis d'autres services
     window.lightServiceInstance = this;
@@ -135,7 +139,14 @@ export class LightService {
               break;
             case 'castShadow':
               if ('castShadow' in obj) {
-                (obj as any).castShadow = value;
+                // Si on active les ombres, gérer la limitation du nombre de lumières avec ombre
+                if (value) {
+                  this.manageShadowCastingLights(obj, lightObj.scene);
+                } else {
+                  // Si on désactive les ombres, mettre à jour notre registre
+                  this.updateShadowCastingLights(obj, lightObj.scene, false);
+                }
+                
                 if (value && (obj instanceof THREE.DirectionalLight || obj instanceof THREE.SpotLight)) {
                   this.configureShadowsForLight(obj);
                 }
@@ -254,14 +265,124 @@ export class LightService {
   }
 
   /**
+   * Gère la limitation du nombre de lumières projetant des ombres
+   * Si le maximum est atteint, désactive la projection d'ombres pour la lumière la moins importante
+   */
+  private manageShadowCastingLights(light: THREE.Light, sceneType: 'navbar' | 'background'): void {
+    // Initialiser la liste des lumières pour cette scène si nécessaire
+    if (!this.shadowCastingLights.has(sceneType)) {
+      this.shadowCastingLights.set(sceneType, []);
+    }
+    
+    const sceneLights = this.shadowCastingLights.get(sceneType)!;
+    
+    // Si la lumière est déjà dans la liste, rien à faire
+    if (sceneLights.includes(light)) {
+      return;
+    }
+    
+    // Si le nombre maximum de lumières avec ombres n'est pas atteint, ajouter simplement la lumière
+    if (sceneLights.length < this.MAX_SHADOW_CASTING_LIGHTS) {
+      sceneLights.push(light);
+      (light as any).castShadow = true;
+      return;
+    }
+    
+    // Sinon, désactiver les ombres pour la lumière la moins "importante"
+    // Priorité: DirectionalLight > SpotLight > PointLight
+    // Et en cas d'égalité, désactiver la plus ancienne
+    
+    // Trier les lumières par type (priorité décroissante) puis par ancienneté (les plus récentes en premier)
+    const getLightPriority = (l: THREE.Light): number => {
+      if (l instanceof THREE.DirectionalLight) return 3;
+      if (l instanceof THREE.SpotLight) return 2;
+      if (l instanceof THREE.PointLight) return 1;
+      return 0;
+    };
+    
+    // Ajouter la nouvelle lumière à la liste temporaire pour le tri
+    const allLights = [...sceneLights, light];
+    allLights.sort((a, b) => {
+      const priorityA = getLightPriority(a);
+      const priorityB = getLightPriority(b);
+      
+      // Si les priorités sont différentes, trier par priorité
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      // Sinon, trier par position dans le tableau (les plus anciens en premier)
+      const indexA = sceneLights.indexOf(a);
+      const indexB = sceneLights.indexOf(b);
+      
+      // La nouvelle lumière doit avoir une priorité plus élevée
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      
+      return indexA - indexB;
+    });
+    
+    // Prendre la lumière avec la priorité la plus basse
+    const lightToDisable = allLights[0];
+    
+              // Si c'est la nouvelle lumière, ne pas l'ajouter et ne pas activer ses ombres
+    if (lightToDisable === light) {
+      (light as any).castShadow = false;
+      return;
+    }
+    
+    // Sinon, désactiver les ombres pour la lumière existante et ajouter la nouvelle
+    (lightToDisable as any).castShadow = false;
+    console.log(`🔄 Limitation des ombres: désactivation pour ${lightToDisable.name} et activation pour ${light.name}`);    // Mettre à jour l'interface SimpleLight correspondante
+    const lightObj = this.simpleLights.find(l => l.name === lightToDisable.name && l.scene === sceneType);
+    if (lightObj) {
+      lightObj.castShadow = false;
+    }
+    
+    // Mettre à jour la liste
+    const index = sceneLights.indexOf(lightToDisable);
+    if (index !== -1) {
+      sceneLights.splice(index, 1);
+    }
+    sceneLights.push(light);
+    
+    // Activer les ombres pour la nouvelle lumière
+    (light as any).castShadow = true;
+  }
+
+  /**
+   * Met à jour la liste des lumières projetant des ombres
+   */
+  private updateShadowCastingLights(light: THREE.Light, sceneType: 'navbar' | 'background', castShadow: boolean): void {
+    // S'assurer que la liste pour cette scène existe
+    if (!this.shadowCastingLights.has(sceneType)) {
+      this.shadowCastingLights.set(sceneType, []);
+    }
+    
+    const sceneLights = this.shadowCastingLights.get(sceneType)!;
+    const index = sceneLights.indexOf(light);
+    
+    // Si on active les ombres et que la lumière n'est pas déjà dans la liste
+    if (castShadow && index === -1) {
+      // Gérer via manageShadowCastingLights pour respecter la limite
+      this.manageShadowCastingLights(light, sceneType);
+    } 
+    // Si on désactive les ombres et que la lumière est dans la liste
+    else if (!castShadow && index !== -1) {
+      // Retirer la lumière de la liste
+      sceneLights.splice(index, 1);
+    }
+  }
+  
+  /**
    * Configure les ombres pour une lumière
    */  
   configureShadowsForLight(light: THREE.Light): void {
     if (!light.shadow) return;
     
-    // Configuration de base
-    light.shadow.mapSize.width = 1024;
-    light.shadow.mapSize.height = 1024;
+    // Configuration de base optimisée (résolution plus petite pour les performances)
+    light.shadow.mapSize.width = 512; // Réduit de 1024 à 512 pour de meilleures performances
+    light.shadow.mapSize.height = 512;
     
     // Configuration spécifique aux types de lumières
     if (light instanceof THREE.DirectionalLight) {
@@ -275,7 +396,7 @@ export class LightService {
       (light.shadow.camera as THREE.OrthographicCamera).far = 50;
       light.shadow.bias = -0.0005;
       light.shadow.normalBias = 0.02;
-      light.shadow.radius = 2;
+      light.shadow.radius = 1; // Réduit de 2 à 1
     } else if (light instanceof THREE.SpotLight) {
       light.shadow.bias = -0.0003;
       (light.shadow.camera as THREE.PerspectiveCamera).near = 0.5;
@@ -316,15 +437,15 @@ export class LightService {
     
     switch (quality) {
       case 'low':
-        shadowMapSize = 512;
-        type = THREE.BasicShadowMap;
+        shadowMapSize = 256; // Réduit davantage pour de meilleures performances
+        type = THREE.BasicShadowMap; // Le plus rapide
         break;
       case 'medium':
-        shadowMapSize = 1024;
+        shadowMapSize = 512; // Réduit de 1024 à 512
         type = THREE.PCFShadowMap;
         break;
       case 'high':
-        shadowMapSize = 2048;
+        shadowMapSize = 1024; // Réduit de 2048 à 1024
         type = THREE.PCFSoftShadowMap;
         break;
     }
@@ -437,6 +558,9 @@ export class LightService {
       });
     });
 
+    // Réinitialiser le suivi des lumières projetant des ombres
+    this.shadowCastingLights.clear();
+    
     // Vider la liste
     this.simpleLights = [];
 
@@ -478,6 +602,9 @@ export class LightService {
       }
     });
 
+    // Appliquer la limitation des ombres
+    this.enforceShadowLimits();
+    
     // Notifier les abonnés
     this.simpleLightsSubject.next([...this.simpleLights]);
   }
@@ -604,32 +731,50 @@ export class LightService {
     if (options.includeDirectional !== false) {
       const directional = new THREE.DirectionalLight(color, options.directionalIntensity || 0.8);
       directional.position.set(-5, 15, 10);
-      directional.castShadow = true;
       directional.name = options.sceneType === 'navbar' ? 'Lumière directionnelle' : 'Direction de fond';
+      
+      // Activer les ombres avec gestion de la limitation
+      directional.castShadow = true;
       
       // Configure shadow quality
       this.configureShadowsForLight(directional);
       
       scene.add(directional);
       result.directional = directional;
+      
+      // Gérer la limitation des ombres
+      this.manageShadowCastingLights(directional, options.sceneType);
     }
     
     // Add point light if requested
     if (options.includePoint !== false) {
       const point = new THREE.PointLight(color, options.pointLightIntensity || 0.8);
       point.position.set(0, 0, 2);
-      point.castShadow = true;
       point.name = options.sceneType === 'navbar' ? 'Lumière ponctuelle' : 'Lumière de fond';
+      
+      // Activer les ombres avec gestion de la limitation
+      point.castShadow = true;
       
       // Configure shadow quality
       this.configureShadowsForLight(point);
       
       scene.add(point);
       result.point = point;
+      
+      // Gérer la limitation des ombres
+      this.manageShadowCastingLights(point, options.sceneType);
     }
     
     // Ajouter la scène à la liste des scènes à gérer
     this.registerScene(scene, options.sceneType);
+    
+    // Optimisation: configurer la qualité des ombres selon les options ou à 'medium' par défaut
+    if (options.shadowQuality) {
+      this.configureShadowQuality(options.shadowQuality, [{ 
+        scene, 
+        renderer: this.sceneRefs.find(ref => ref.scene === scene && ref.renderer)?.renderer! 
+      }]);
+    }
     
     // Update lights in the service
     this.refreshLights([{
@@ -905,6 +1050,10 @@ export class LightService {
     scene.add(ambient);
     console.log('✅ Ambiante créée avec intensité:', ambient.intensity);
 
+    // Réinitialiser le suivi des lumières projetant des ombres pour cette scène
+    this.shadowCastingLights.set('navbar', []);
+    
+    // Création des lumières par ordre de priorité pour les ombres
     const directional = new THREE.DirectionalLight('#ffffff', 0);
     directional.position.set(-5.000, 15.000, 10.000);
     directional.target.position.set(0.000, 0.000, 0.000);
@@ -912,16 +1061,30 @@ export class LightService {
     directional.name = 'Lumière directionnelle';
     this.configureShadowsForLight(directional);
     scene.add(directional);
+    this.manageShadowCastingLights(directional, 'navbar');
     console.log('✅ Directionnelle créée avec intensité:', directional.intensity);
 
-    const point = new THREE.PointLight('#ffffff', 0, 0, 2);
-    point.position.set(0.000, 0.000, 2.000);
-    point.castShadow = true;
-    point.name = 'Lumière ponctuelle';
-    this.configureShadowsForLight(point);
-    scene.add(point);
-    console.log('✅ Ponctuelle créée avec intensité:', point.intensity);
+    const sun = new THREE.DirectionalLight('#ffffff', 0);
+    sun.position.set(0.000, 20.903, 0.000);
+    sun.target.position.set(0.000, 0.000, -1.000);
+    sun.castShadow = true;
+    sun.name = 'Sun';
+    this.configureShadowsForLight(sun);
+    scene.add(sun);
+    this.manageShadowCastingLights(sun, 'navbar');
+    console.log('✅ Sun créée avec intensité:', sun.intensity);
 
+    const spotPrincipal = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 1, 2);
+    spotPrincipal.position.set(1.642, 12.590, -8.854);
+    spotPrincipal.target.position.set(0.000, 0.000, -1.000);
+    spotPrincipal.castShadow = true;
+    spotPrincipal.name = 'Spotprincipal';
+    this.configureShadowsForLight(spotPrincipal);
+    scene.add(spotPrincipal);
+    this.manageShadowCastingLights(spotPrincipal, 'navbar');
+    console.log('✅ SpotPrincipal créée avec intensité:', spotPrincipal.intensity);
+
+    // Lumières avec potentiellement pas d'ombres selon les limites
     const spotBD = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
     spotBD.position.set(-79.931, 12.193, 5.648);
     spotBD.target.position.set(0.000, 0.000, -1.000);
@@ -929,6 +1092,7 @@ export class LightService {
     spotBD.name = 'SpotBD';
     this.configureShadowsForLight(spotBD);
     scene.add(spotBD);
+    this.manageShadowCastingLights(spotBD, 'navbar');
     console.log('✅ SpotBD créée avec intensité:', spotBD.intensity);
 
     const spotHD = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
@@ -938,17 +1102,9 @@ export class LightService {
     spotHD.name = 'SpotHD';
     this.configureShadowsForLight(spotHD);
     scene.add(spotHD);
+    this.manageShadowCastingLights(spotHD, 'navbar');
     console.log('✅ SpotHD créée avec intensité:', spotHD.intensity);
-
-    const spotPrincipal = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 1, 2);
-    spotPrincipal.position.set(1.642, 12.590, -8.854);
-    spotPrincipal.target.position.set(0.000, 0.000, -1.000);
-    spotPrincipal.castShadow = true;
-    spotPrincipal.name = 'Spotprincipal';
-    this.configureShadowsForLight(spotPrincipal);
-    scene.add(spotPrincipal);
-    console.log('✅ SpotPrincipal créée avec intensité:', spotPrincipal.intensity);
-
+    
     const spotRouge = new THREE.SpotLight('#ff0009', 0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
     spotRouge.position.set(20.210, 12.193, 5.512);
     spotRouge.target.position.set(0.000, 0.000, -1.000);
@@ -956,22 +1112,26 @@ export class LightService {
     spotRouge.name = 'Spotrouge';
     this.configureShadowsForLight(spotRouge);
     scene.add(spotRouge);
+    this.manageShadowCastingLights(spotRouge, 'navbar');
     console.log('✅ SpotRouge créée avec intensité:', spotRouge.intensity);
 
-    const sun = new THREE.DirectionalLight('#ffffff', 0);
-    sun.position.set(0.000, 20.903, 0.000);
-    sun.target.position.set(0.000, 0.000, -1.000);
-    sun.castShadow = true;
-    sun.name = 'Sun';
-    this.configureShadowsForLight(sun);
-    scene.add(sun);
-    console.log('✅ Sun créée avec intensité:', sun.intensity);
+    const point = new THREE.PointLight('#ffffff', 0, 0, 2);
+    point.position.set(0.000, 0.000, 2.000);
+    point.castShadow = true;
+    point.name = 'Lumière ponctuelle';
+    this.configureShadowsForLight(point);
+    scene.add(point);
+    this.manageShadowCastingLights(point, 'navbar');
+    console.log('✅ Ponctuelle créée avec intensité:', point.intensity);
 
     // ÉTAPE 3: Enregistrer la scène et actualiser la liste
     this.registerScene(scene, 'navbar');
 
     // Actualiser la liste des lumières
     this.refreshLights([{ scene, type: 'navbar' }]);
+    
+    // Appliquer la limitation des ombres
+    this.enforceShadowLimits();
 
     // ÉTAPE 4: Lancer l'animation des intensités
     setTimeout(() => {
@@ -1048,6 +1208,63 @@ export class LightService {
           }
         }
       });
+    });
+    
+    // Notifier les abonnés
+    this.simpleLightsSubject.next([...this.simpleLights]);
+  }
+
+  /**
+   * Applique la limitation des ombres à toutes les lumières existantes
+   * Utile après le chargement de modèles GLTF qui peuvent contenir des lumières avec ombres
+   */
+  enforceShadowLimits(): void {
+    // Réinitialiser le suivi des lumières avec ombres
+    this.shadowCastingLights.clear();
+    
+    // Pour chaque scène, appliquer les limites
+    this.sceneRefs.forEach(({ scene, type }) => {
+      // Liste pour cette scène
+      const sceneLights: THREE.Light[] = [];
+      this.shadowCastingLights.set(type, sceneLights);
+      
+      // Récupérer toutes les lumières avec ombres
+      const lightsWithShadow: THREE.Light[] = [];
+      scene.traverse(obj => {
+        if (obj instanceof THREE.Light && obj.castShadow) {
+          lightsWithShadow.push(obj);
+        }
+      });
+      
+      // Trier les lumières par type (priorité décroissante)
+      lightsWithShadow.sort((a, b) => {
+        const getPriority = (l: THREE.Light): number => {
+          if (l instanceof THREE.DirectionalLight) return 3;
+          if (l instanceof THREE.SpotLight) return 2;
+          if (l instanceof THREE.PointLight) return 1;
+          return 0;
+        };
+        return getPriority(b) - getPriority(a);
+      });
+      
+      // Désactiver les ombres pour toutes les lumières au-delà de la limite
+      lightsWithShadow.forEach((light, index) => {
+        if (index < this.MAX_SHADOW_CASTING_LIGHTS) {
+          // Garder les ombres activées
+          sceneLights.push(light);
+        } else {
+          // Désactiver les ombres
+          light.castShadow = false;
+          
+          // Mettre à jour l'interface SimpleLight correspondante
+          const lightObj = this.simpleLights.find(l => l.name === light.name && l.scene === type);
+          if (lightObj) {
+            lightObj.castShadow = false;
+          }
+        }
+      });
+      
+      console.log(`🔄 Limitation des ombres appliquée pour la scène ${type}: ${sceneLights.length} lumières avec ombres activées sur ${lightsWithShadow.length} lumières totales`);
     });
     
     // Notifier les abonnés
