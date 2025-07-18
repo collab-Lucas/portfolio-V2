@@ -136,23 +136,39 @@ export class BackgroundThreeService {
   }
 
   /**
-   * Configure les event listeners
+   * Limite le nombre d'appels à une fonction
+   */
+  private throttle(callback: Function, delay: number): (...args: any[]) => void {
+    let lastCall = 0;
+    return (...args: any[]) => {
+      const now = Date.now();
+      if (now - lastCall >= delay) {
+        lastCall = now;
+        callback(...args);
+      }
+    };
+  }
+  
+  /**
+   * Configure les event listeners avec throttling pour réduire les appels
    */
   private setupEventListeners(): void {
-    this.boundMoveCamera = this.moveCamera.bind(this);
-    this.boundMouseMove = this.handleMouseMove.bind(this);
+    this.boundMoveCamera = this.throttle(this.moveCamera.bind(this), 100); // Throttle à 100ms
+    this.boundMouseMove = this.throttle(this.handleMouseMove.bind(this), 50); // Throttle à 50ms
     
-    window.addEventListener('scroll', this.boundMoveCamera);
-    window.addEventListener('mousemove', this.boundMouseMove);
+    window.addEventListener('scroll', this.boundMoveCamera, { passive: true });
+    window.addEventListener('mousemove', this.boundMouseMove, { passive: true });
     window.addEventListener('resize', this.onResize.bind(this));
   }
 
   /**
    * Gère le mouvement de la souris
    */
-  private handleMouseMove = (event: MouseEvent): void => {
+  private handleMouseMove(event: MouseEvent): void {
     this.mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+    // Demander un rendu lorsque la souris bouge
+    this.needsUpdate = true;
   };
 
   /**
@@ -365,9 +381,12 @@ export class BackgroundThreeService {
   }
 
   /**
-   * Génère les clones de prismes
+   * Génère les clones de prismes - version sécurisée sans InstancedMesh
+   * pour éviter les problèmes de compatibilité avec la navbar
    */
   private generatePrismeClones(prisme: THREE.Group, count: number): void {
+    // Revenir à la méthode originale de clonage pour éviter les erreurs de type
+    // et les problèmes potentiels avec la navbar
     for (let i = 0; i < count; i++) {
       const clone = prisme.clone();
       
@@ -412,7 +431,8 @@ export class BackgroundThreeService {
       },
       undefined,
       (error) => {
-        console.error(`Erreur lors du chargement du modèle ${name}:`, error);
+        // Suppression du log pour optimisation
+        // Possibilité d'ajouter un système de logging silencieux ou une notification UI
       }
     );
   }
@@ -529,7 +549,20 @@ export class BackgroundThreeService {
   }
 
   /**
-   * Boucle d'animation
+   * Indicateur pour savoir si un rendu est nécessaire
+   * Optimisation: Rendu uniquement lorsque nécessaire
+   */
+  private needsUpdate: boolean = true;
+  
+  /**
+   * Demande un nouveau rendu
+   */
+  public requestRender(): void {
+    this.needsUpdate = true;
+  }
+  
+  /**
+   * Boucle d'animation optimisée avec rendu conditionnel
    */
   private animate(): void {
     const render = () => {
@@ -543,7 +576,12 @@ export class BackgroundThreeService {
       this.updateShaders();
       this.animateObjects(delta);
       
-      this.renderer.render(this.scene, this.camera);
+      // Optimisation: Rendu uniquement si nécessaire
+      if (this.needsUpdate) {
+        this.renderer.render(this.scene, this.camera);
+        this.needsUpdate = false;
+      }
+      
       this.animationId = requestAnimationFrame(render);
     };
     
@@ -554,12 +592,23 @@ export class BackgroundThreeService {
    * Met à jour les shaders
    */
   private updateShaders(): void {
+    // Uniquement mettre à jour les shaders toutes les N frames pour économiser des ressources
+    const updateInterval = this.qualityLevel === 'low' ? 5 : (this.qualityLevel === 'medium' ? 3 : 1);
+    
+    // Si on n'est pas sur une frame d'update de shader, retourner immédiatement
+    if (Math.floor(this.animationTime * 60) % updateInterval !== 0) {
+      return;
+    }
+    
+    let shadersUpdated = false;
+    
     this.scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         if (child.material instanceof THREE.ShaderMaterial && 
             child.material.uniforms && 
             child.material.uniforms['time'] !== undefined) {
           child.material.uniforms['time'].value = this.animationTime;
+          shadersUpdated = true;
         }
         else if (child.material instanceof THREE.MeshBasicMaterial && 
                  child.material.userData && 
@@ -567,9 +616,15 @@ export class BackgroundThreeService {
                  child.material.userData['shader'].uniforms && 
                  child.material.userData['shader'].uniforms['time']) {
           child.material.userData['shader'].uniforms['time'].value = this.animationTime;
+          shadersUpdated = true;
         }
       }
     });
+    
+    // Si des shaders ont été mis à jour, demander un rendu
+    if (shadersUpdated) {
+      this.needsUpdate = true;
+    }
   }
 
   /**
@@ -577,23 +632,42 @@ export class BackgroundThreeService {
    */
   private animateObjects(delta: number): void {
     const frameMultiplier = delta * 60;
+    let objectsAnimated = false;
     
     if (this.models['prisme']) {
       this.models['prisme'].rotation.y += 0.005 * frameMultiplier;
+      objectsAnimated = true;
     }
     
     if (this.models['scene_bureau']) {
       const bureau = this.models['scene_bureau'];
       const initialRotationY = THREE.MathUtils.degToRad(-35);
       
-      bureau.rotation.x = this.mouseY * 0.01;
-      bureau.rotation.y = initialRotationY + this.mouseX * 0.01;
+      // Uniquement mettre à jour si la souris a réellement changé de position
+      const newRotX = this.mouseY * 0.01;
+      const newRotY = initialRotationY + this.mouseX * 0.01;
+      
+      if (Math.abs(bureau.rotation.x - newRotX) > 0.0001 || 
+          Math.abs(bureau.rotation.y - newRotY) > 0.0001) {
+        bureau.rotation.x = newRotX;
+        bureau.rotation.y = newRotY;
+        objectsAnimated = true;
+      }
       
       const t = document.body.getBoundingClientRect().top;
       if (t >= -850 && t <= -650) {
-        bureau.rotation.z = Math.sin(this.animationTime * 2) * 0.01;
-      } else {
+        const newRotZ = Math.sin(this.animationTime * 2) * 0.01;
+        if (Math.abs(bureau.rotation.z - newRotZ) > 0.0001) {
+          bureau.rotation.z = newRotZ;
+          objectsAnimated = true;
+        }
+      } else if (bureau.rotation.z !== 0) {
         bureau.rotation.z *= 0.95;
+        if (Math.abs(bureau.rotation.z) > 0.0001) {
+          objectsAnimated = true;
+        } else {
+          bureau.rotation.z = 0;
+        }
       }
     }
     
@@ -608,101 +682,300 @@ export class BackgroundThreeService {
         child.rotation.x += 0.002 * frameMultiplier;
         child.rotation.y += 0.003 * frameMultiplier;
         prismCount++;
+        objectsAnimated = true;
       }
     });
-  }
-
-  /**
-   * Déplace la caméra selon le scroll
-   */
-  private moveCamera(): void {
-    const t = document.body.getBoundingClientRect().top;
-
-    const initialPosition = { x: -3, y: 0, z: 300 };
-    const bureauPosition = { x: 16, y: -20, z: 9.5 };
-    const fondPosition = { x: 62, y: 30, z: -70 };
-
-    const initialRotation = THREE.MathUtils.degToRad(-3.69);
-    const bureauRotation = THREE.MathUtils.degToRad(-3.69 + 35);
-    const fondRotation = THREE.MathUtils.degToRad(-3.69 + 70);
-
-    if (t > -650) {
-      const progress = Math.abs(t) / 650;
-      this.camera.position.x = initialPosition.x + (bureauPosition.x - initialPosition.x) * progress;
-      this.camera.position.y = initialPosition.y + (bureauPosition.y - initialPosition.y) * progress;
-      this.camera.position.z = initialPosition.z + (bureauPosition.z - initialPosition.z) * progress;
-      this.camera.rotation.y = initialRotation + (bureauRotation - initialRotation) * progress;
-    } else if (t >= -1050 && t <= -650) {
-      this.camera.position.copy(new THREE.Vector3(bureauPosition.x, bureauPosition.y, bureauPosition.z));
-      this.camera.rotation.y = bureauRotation;
-    } else if (t > -1800 && t <= -1050) {
-      const progress = (Math.abs(t) - 1050) / 750;
-      this.camera.position.x = bureauPosition.x + (fondPosition.x - bureauPosition.x) * progress;
-      this.camera.position.y = bureauPosition.y + (fondPosition.y - bureauPosition.y) * progress;
-      this.camera.position.z = bureauPosition.z + (fondPosition.z - bureauPosition.z) * progress;
-      
-      const additionalRotation = THREE.MathUtils.degToRad(-40);
-      const targetRotation = fondRotation + additionalRotation;
-      this.camera.rotation.y = bureauRotation + (targetRotation - bureauRotation) * progress;
-    } else if (t >= -2100 && t <= -1800) {
-      this.camera.position.copy(new THREE.Vector3(fondPosition.x, fondPosition.y, fondPosition.z));
-      this.camera.rotation.y = fondRotation + THREE.MathUtils.degToRad(-40);
-    } else {
-      const progress = (Math.abs(t) - 2100) / 400;
-      this.camera.position.x = fondPosition.x + progress * 20;
-      this.camera.position.y = fondPosition.y + progress * -10;
-      this.camera.position.z = fondPosition.z + progress * 50;
-      this.camera.rotation.y = fondRotation + THREE.MathUtils.degToRad(-40);
+    
+    // Si des objets ont été animés, demander un rendu
+    if (objectsAnimated) {
+      this.needsUpdate = true;
     }
   }
 
+  // Points de caméra pré-calculés pour éviter les calculs répétitifs
+  private readonly cameraPoints = {
+    initial: {
+      position: new THREE.Vector3(-3, 0, 300),
+      rotation: THREE.MathUtils.degToRad(-3.69)
+    },
+    bureau: {
+      position: new THREE.Vector3(16, -20, 9.5),
+      rotation: THREE.MathUtils.degToRad(-3.69 + 35)
+    },
+    fond: {
+      position: new THREE.Vector3(62, 30, -70),
+      rotation: THREE.MathUtils.degToRad(-3.69 + 70)
+    }
+  };
+  
+  // Seuils de scroll pré-calculés
+  private readonly scrollThresholds = {
+    section1: -650,
+    section2: -1050,
+    section3: -1800,
+    section4: -2100
+  };
+  
+  // Cache pour éviter les calculs répétitifs
+  private lastScrollTop: number = 0;
+  private scrollSection: number = 0;
+  
   /**
-   * Gère le redimensionnement
+   * Déplace la caméra selon le scroll avec des optimisations de performances
+   */
+  private moveCamera(): void {
+    const t = document.body.getBoundingClientRect().top;
+    
+    // Si le scroll n'a pas changé significativement, éviter le recalcul
+    if (Math.abs(t - this.lastScrollTop) < 5) {
+      return;
+    }
+    
+    this.lastScrollTop = t;
+    this.needsUpdate = true;
+    
+    // Déterminer la section actuelle pour éviter des comparaisons répétitives
+    let currentSection = 0;
+    if (t > this.scrollThresholds.section1) currentSection = 1;
+    else if (t >= this.scrollThresholds.section2 && t <= this.scrollThresholds.section1) currentSection = 2;
+    else if (t > this.scrollThresholds.section3 && t <= this.scrollThresholds.section2) currentSection = 3;
+    else if (t >= this.scrollThresholds.section4 && t <= this.scrollThresholds.section3) currentSection = 4;
+    else currentSection = 5;
+    
+    // Si la section n'a pas changé, éviter certains calculs
+    if (currentSection === this.scrollSection && 
+        (currentSection === 2 || currentSection === 4)) {
+      return;
+    }
+    
+    this.scrollSection = currentSection;
+    
+    // Utiliser les points pré-calculés
+    const { initial, bureau, fond } = this.cameraPoints;
+    
+    switch (currentSection) {
+      case 1: // Section 1: Transition initiale vers bureau
+        const progress1 = Math.abs(t) / Math.abs(this.scrollThresholds.section1);
+        this.camera.position.lerpVectors(initial.position, bureau.position, progress1);
+        this.camera.rotation.y = initial.rotation + (bureau.rotation - initial.rotation) * progress1;
+        break;
+        
+      case 2: // Section 2: Bureau fixe
+        this.camera.position.copy(bureau.position);
+        this.camera.rotation.y = bureau.rotation;
+        break;
+        
+      case 3: // Section 3: Transition bureau vers fond
+        const progress3 = (Math.abs(t) - Math.abs(this.scrollThresholds.section2)) / 
+                        (Math.abs(this.scrollThresholds.section3) - Math.abs(this.scrollThresholds.section2));
+        this.camera.position.lerpVectors(bureau.position, fond.position, progress3);
+        
+        const additionalRotation = THREE.MathUtils.degToRad(-40);
+        const targetRotation = fond.rotation + additionalRotation;
+        this.camera.rotation.y = bureau.rotation + (targetRotation - bureau.rotation) * progress3;
+        break;
+        
+      case 4: // Section 4: Fond fixe
+        this.camera.position.copy(fond.position);
+        this.camera.rotation.y = fond.rotation + THREE.MathUtils.degToRad(-40);
+        break;
+        
+      case 5: // Section 5: Fin du scroll
+        const progress5 = (Math.abs(t) - Math.abs(this.scrollThresholds.section4)) / 400;
+        const endPos = new THREE.Vector3(
+          fond.position.x + progress5 * 20,
+          fond.position.y - progress5 * 10,
+          fond.position.z + progress5 * 50
+        );
+        this.camera.position.copy(endPos);
+        this.camera.rotation.y = fond.rotation + THREE.MathUtils.degToRad(-40);
+        break;
+    }
+  }
+
+  // Variables pour limiter les redimensionnements
+  private lastWidth: number = 0;
+  private lastHeight: number = 0;
+  private resizeTimeout: any = null;
+  
+  /**
+   * Gère le redimensionnement avec debouncing et caching
    */
   onResize(): void {
     if (!this.renderer || !this.camera) return;
     
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.camera.aspect = window.innerWidth / window.innerHeight;
-    this.camera.updateProjectionMatrix();
+    // Annuler tout redimensionnement précédent en attente
+    if (this.resizeTimeout) {
+      clearTimeout(this.resizeTimeout);
+    }
+    
+    // Attendre que le redimensionnement soit terminé avant d'appliquer (debouncing)
+    this.resizeTimeout = setTimeout(() => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      // Vérifier si la taille a réellement changé de manière significative (>5%)
+      const widthDiff = Math.abs(width - this.lastWidth);
+      const heightDiff = Math.abs(height - this.lastHeight);
+      
+      if (widthDiff > this.lastWidth * 0.05 || heightDiff > this.lastHeight * 0.05 || 
+          this.lastWidth === 0 || this.lastHeight === 0) {
+        
+        // Mettre à jour la taille du renderer
+        this.renderer.setSize(width, height);
+        
+        // Mettre à jour la caméra seulement si nécessaire
+        if (this.camera.aspect !== width / height) {
+          this.camera.aspect = width / height;
+          this.camera.updateProjectionMatrix();
+        }
+        
+        // Mettre à jour les dernières dimensions connues
+        this.lastWidth = width;
+        this.lastHeight = height;
+        
+        // Demander un rendu
+        this.needsUpdate = true;
+      }
+      
+      this.resizeTimeout = null;
+    }, 250); // Attendre 250ms après le dernier événement de redimensionnement
   }
 
   /**
-   * Nettoie les ressources
+   * Nettoie les ressources pour éviter les fuites mémoire
    */
   dispose(): void {
+    // Nettoyer l'animation
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
     
+    // Supprimer les gestionnaires d'événements
     if (this.boundMoveCamera) {
       window.removeEventListener('scroll', this.boundMoveCamera);
+      this.boundMoveCamera = null;
     }
     
     if (this.boundMouseMove) {
       window.removeEventListener('mousemove', this.boundMouseMove);
+      this.boundMouseMove = null;
     }
     
+    window.removeEventListener('resize', this.onResize.bind(this));
+    
+    // Annuler tout timeout en attente
+    if (this.resizeTimeout) {
+      clearTimeout(this.resizeTimeout);
+      this.resizeTimeout = null;
+    }
+    
+    // Nettoyer la scène et libérer la mémoire
+    if (this.scene) {
+      this.scene.traverse((object) => {
+        if (object instanceof THREE.Mesh) {
+          if (object.geometry) {
+            object.geometry.dispose();
+          }
+          
+          if (object.material) {
+            // Gérer les matériaux simples et les tableaux de matériaux
+            if (Array.isArray(object.material)) {
+              object.material.forEach(material => {
+                this.disposeMaterial(material);
+              });
+            } else {
+              this.disposeMaterial(object.material);
+            }
+          }
+          
+          // Supprimer les références cycliques
+          object.parent?.remove(object);
+        }
+      });
+    }
+    
+    // Nettoyer les modèles
     Object.values(this.models).forEach(model => {
       model.traverse((object) => {
         if (object instanceof THREE.Mesh) {
           if (object.geometry) object.geometry.dispose();
           if (object.material) {
             if (Array.isArray(object.material)) {
-              object.material.forEach(material => material.dispose());
+              object.material.forEach(material => this.disposeMaterial(material));
             } else {
-              object.material.dispose();
+              this.disposeMaterial(object.material);
             }
           }
         }
       });
     });
     
+    // Vider les références aux modèles
     this.models = {};
     
-    if (this.renderer) this.renderer.dispose();
+    // Nettoyer le renderer
+    if (this.renderer) {
+      this.renderer.dispose();
+      this.renderer.forceContextLoss();
+      this.renderer.domElement?.remove();
+      // Ne pas assigner null pour éviter les erreurs de type
+      // this.renderer est toujours défini mais inutilisable après dispose
+    }
     
+    // Ne pas assigner null aux propriétés de type non-nullable
+    // Marquer simplement comme non initialisé
     this.initialized = false;
+  }
+  
+  /**
+   * Méthode auxiliaire pour nettoyer un matériau et ses ressources associées
+   */
+  private disposeMaterial(material: THREE.Material): void {
+    // Disposer des textures de base (présentes sur tous les types de matériaux supportés)
+    if (material instanceof THREE.MeshBasicMaterial) {
+      if (material.map) material.map.dispose();
+      if (material.lightMap) material.lightMap.dispose();
+      if (material.aoMap) material.aoMap.dispose();
+      if (material.alphaMap) material.alphaMap.dispose();
+      if (material.envMap) material.envMap.dispose();
+    }
+    
+    // Disposer des textures spécifiques à MeshStandardMaterial
+    if (material instanceof THREE.MeshStandardMaterial) {
+      if (material.map) material.map.dispose();
+      if (material.lightMap) material.lightMap.dispose();
+      if (material.aoMap) material.aoMap.dispose();
+      if (material.emissiveMap) material.emissiveMap.dispose();
+      if (material.normalMap) material.normalMap.dispose();
+      if (material.roughnessMap) material.roughnessMap.dispose();
+      if (material.metalnessMap) material.metalnessMap.dispose();
+      if (material.alphaMap) material.alphaMap.dispose();
+      if (material.envMap) material.envMap.dispose();
+    }
+    
+    // Disposer des textures spécifiques à MeshPhongMaterial
+    if (material instanceof THREE.MeshPhongMaterial) {
+      if (material.map) material.map.dispose();
+      if (material.lightMap) material.lightMap.dispose();
+      if (material.aoMap) material.aoMap.dispose();
+      if (material.emissiveMap) material.emissiveMap.dispose();
+      if (material.alphaMap) material.alphaMap.dispose();
+      if (material.envMap) material.envMap.dispose();
+    }
+    
+    // Pour les matériaux de shader, nettoyer les uniforms avec des textures
+    if (material instanceof THREE.ShaderMaterial) {
+      for (const uniformName in material.uniforms) {
+        const uniform = material.uniforms[uniformName];
+        if (uniform && uniform.value instanceof THREE.Texture) {
+          uniform.value.dispose();
+        }
+      }
+    }
+    
+    // Disposer le matériau lui-même
+    material.dispose();
   }
 }
