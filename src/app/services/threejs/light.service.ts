@@ -19,24 +19,14 @@ export interface SimpleLight {
 
 /**
  * Interface pour les lumières Three.js avec intensité
+ * Cette interface est nécessaire pour le cast typé de propriétés Three.js
  */
 export interface LightWithIntensity extends THREE.Light {
   intensity: number;
 }
 
-/**
- * Interface pour les lumières Three.js avec position
- */
-export interface LightWithPosition extends THREE.Light {
-  position: THREE.Vector3;
-}
-
-/**
- * Interface pour les lumières Three.js avec casting shadow
- */
-export interface LightWithShadow extends THREE.Light {
-  castShadow: boolean;
-}
+// Les autres interfaces redondantes ont été supprimées car Three.js
+// inclut déjà ces propriétés dans ses types
 
 interface SceneReference {
   scene: THREE.Scene;
@@ -1141,13 +1131,10 @@ export class LightService {
       frame++;
       if (frame < totalFrames) {
         requestAnimationFrame(animate);
-      } else {
-        console.log('✅ Animation des lumières terminée');
       }
     };
 
     // Démarrer l'animation
-    console.log('🎬 Démarrage de l\'animation des lumières');
     requestAnimationFrame(animate);
   }
   
