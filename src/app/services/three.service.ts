@@ -66,11 +66,9 @@ export class ThreeService {
   onResize() {
     // Redimensionner à la fois la navbar et le background
     this.navbarService.onResize();
-    
+
     // Appeler notre nouvelle méthode onResize sur le BackgroundThreeService
-    if (this.backgroundService) {
-      this.backgroundService.onResize();
-    }
+    this.backgroundService.onResize();
   }
 
   /**
@@ -238,10 +236,10 @@ export class ThreeService {
   }
 
   /**
-   * Synchronise l'état enabled d'une lumière avec son intensité
+   * Synchronise l'état enabled de toutes les lumières
    */
-  syncLightEnabledState(lightName: string): void {
-    this.lightService.syncLightEnabledState(lightName);
+  syncLightEnabledState(): void {
+    this.lightService.syncAllLightsEnabledState();
   }
 
   /**
@@ -253,17 +251,15 @@ export class ThreeService {
 
   /**
    * Cette méthode ne fait rien car l'animation est gérée dans les services spécialisés
-   * mais est fournie pour la compatibilité avec l'ancienne API
+  /**
+   * @deprecated Cette méthode ne fait rien car l'animation est gérée dans les services spécialisés,
+   * mais est fournie pour la compatibilité avec l'ancienne API.
    */
   animate(): void {
     // L'animation est maintenant gérée directement dans NavbarThreeService et BackgroundThreeService
     // Cette méthode est fournie pour la compatibilité avec l'ancienne API
   }
 
-  /**
-   * Ajuste la caméra en fonction de l'état de la navbar
-   * @param isShrunk True si la navbar est repliée, false sinon
-   */
   adjustCameraForNavbarState(isShrunk: boolean): void {
     this.navbarService.adjustCameraForNavbarState(isShrunk);
   }

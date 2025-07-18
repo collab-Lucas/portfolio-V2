@@ -1,7 +1,5 @@
-import { Injectable } from '@angular/core';
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
+// Interface et presets qualité (à placer AVANT la classe)
 interface QualitySettings {
   prismCount: number;
   sphereSegments: number;
@@ -14,17 +12,21 @@ interface QualitySettings {
 const QUALITY_PRESETS: Record<string, QualitySettings> = {
   low: { prismCount: 20, sphereSegments: 16, shadowMapSize: 512, pixelRatio: 0.5, enableShadows: false, enableAntialiasing: false },
   medium: { prismCount: 50, sphereSegments: 32, shadowMapSize: 1024, pixelRatio: 1, enableShadows: true, enableAntialiasing: true },
-  high: { prismCount: 100, sphereSegments: 64, shadowMapSize: 2048, pixelRatio: 1.5, enableShadows: true, enableAntialiasing: true }
+  high: { prismCount: 100, sphereSegments: 32, shadowMapSize: 2048, pixelRatio: 1.5, enableShadows: true, enableAntialiasing: true }
 };
+
+import { Injectable } from '@angular/core';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { ThreeCoreService } from './threejs/three-core.service';
+
+// ...début de la classe...
 
 @Injectable({
   providedIn: 'root'
 })
-export class BackgroundThreeService {
-  private scene!: THREE.Scene;
-  private camera!: THREE.PerspectiveCamera;
-  private renderer!: THREE.WebGLRenderer;
-  private animationId: number | null = null;
+
+export class BackgroundThreeService extends ThreeCoreService {
   private models: { [key: string]: THREE.Group } = {};
   private loader = new GLTFLoader();
   private boundMoveCamera: any;
@@ -35,19 +37,22 @@ export class BackgroundThreeService {
   private clock = new THREE.Clock();
   private qualityLevel: 'low' | 'medium' | 'high' = 'medium';
   private qualitySettings: QualitySettings = QUALITY_PRESETS['medium'];
-  private initialized = false;
-  private lastWidth = 0;
-  private lastHeight = 0;
-  private resizeTimeout: any = null;
   private needsUpdate = true;
-
-  // Ajoute ces propriétés à la classe
   private cameraTargetPosition = new THREE.Vector3(-3, 0, 300);
   private cameraTargetRotationY = THREE.MathUtils.degToRad(-3.69);
 
   constructor() {
+    super();
     this.detectPerformanceLevel();
   }
+
+  /**
+   * Configure les event listeners avec throttling amélioré pour des mouvements fluides
+   */
+
+  // ...reste de la classe...
+
+
 
   /**
    * Détecte le niveau de performance de l'appareil
@@ -84,35 +89,13 @@ export class BackgroundThreeService {
     this.initialized = true;
   }
 
-  /**
-   * Initialise la scène de base
-   */
-  private initializeScene(canvas: HTMLCanvasElement): void {
-    // Scène
-    this.scene = new THREE.Scene();
+  // initializeScene hérité et adapté via ThreeCoreService
+  protected override initializeScene(canvas: HTMLCanvasElement): void {
+    super.initializeScene(canvas, 75, 0.1, 1000);
     this.scene.fog = new THREE.Fog(0xcccccc, 1, 500);
-
-    // Caméra
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
     this.camera.position.set(-3, 0, 300);
     this.camera.rotation.set(0, THREE.MathUtils.degToRad(-3.69), 0);
-
-    // Renderer
-    this.renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: false,
-      antialias: this.qualitySettings.enableAntialiasing
-    });
-    
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(this.qualitySettings.pixelRatio, window.devicePixelRatio));
-    this.renderer.setClearColor(0xffffff, 0);
-    
     if (this.qualitySettings.enableShadows) {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -156,47 +139,17 @@ export class BackgroundThreeService {
       }
     };
   }
-  
-  /**
-   * Fonction pour lisser les événements avec une courbe d'easing
-   * Plus sophistiqué que throttle pour les mouvements de caméra
-   */
-  private smoothEvent(callback: Function, delay: number): (...args: any[]) => void {
-    let lastCall = 0;
-    let requestId: number | null = null;
-    let lastArgs: any[] = [];
-    
-    return (...args: any[]) => {
-      lastArgs = args;
-      const now = Date.now();
-      
-      // Si c'est le premier appel ou si le délai est écoulé, exécuter immédiatement
-      if (now - lastCall >= delay) {
-        lastCall = now;
-        callback(...args);
-      } else if (!requestId) {
-        // Sinon, planifier une exécution différée pour un mouvement fluide
-        requestId = window.setTimeout(() => {
-          lastCall = Date.now();
-          requestId = null;
-          callback(...lastArgs);
-        }, delay - (now - lastCall));
-      }
-    };
-  }
-  
+
   /**
    * Configure les event listeners avec throttling amélioré pour des mouvements fluides
    */
-private setupEventListeners(): void {
-  // Throttle scroll event for camera movement
-  this.boundMoveCamera = this.throttle(this.moveCamera.bind(this), 30); // 30ms throttle for scroll
-  this.boundMouseMove = this.throttle(this.handleMouseMove.bind(this), 50);
-
-  window.addEventListener('scroll', this.boundMoveCamera, { passive: true });
-  window.addEventListener('mousemove', this.boundMouseMove, { passive: true });
-  window.addEventListener('resize', this.onResize.bind(this));
-}
+  private setupEventListeners(): void {
+    this.boundMoveCamera = this.throttle(this.moveCamera.bind(this), 30); // 30ms throttle for scroll
+    this.boundMouseMove = this.throttle(this.handleMouseMove.bind(this), 50);
+    window.addEventListener('scroll', this.boundMoveCamera, { passive: true });
+    window.addEventListener('mousemove', this.boundMouseMove, { passive: true });
+    window.addEventListener('resize', this.onResize.bind(this));
+  }
 
   /**
    * Gère le mouvement de la souris
@@ -204,7 +157,7 @@ private setupEventListeners(): void {
   private handleMouseMove(event: MouseEvent): void {
     this.mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-  };
+  }
 
   /**
    * Charge les modèles 3D
@@ -889,63 +842,20 @@ private moveCamera() {
     }, 250); // Attendre 250ms après le dernier événement de redimensionnement
   }
 
-  /**
-   * Nettoie les ressources pour éviter les fuites mémoire
-   */
-  dispose(): void {
-    // Nettoyer l'animation
+  override dispose(): void {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
-    
-    // Supprimer les gestionnaires d'événements
     if (this.boundMoveCamera) {
       window.removeEventListener('scroll', this.boundMoveCamera);
       this.boundMoveCamera = null;
     }
-    
     if (this.boundMouseMove) {
       window.removeEventListener('mousemove', this.boundMouseMove);
       this.boundMouseMove = null;
     }
-    
-    // Utiliser une référence liée déjà existante serait préférable ici
-    // mais nous utilisons un nouveau bind pour correspondre à celui utilisé lors de l'ajout
     window.removeEventListener('resize', this.onResize.bind(this));
-    
-    // Annuler tout timeout en attente
-    if (this.resizeTimeout) {
-      clearTimeout(this.resizeTimeout);
-      this.resizeTimeout = null;
-    }
-    
-    // Nettoyer la scène et libérer la mémoire
-    if (this.scene) {
-      this.scene.traverse((object) => {
-        if (object instanceof THREE.Mesh) {
-          if (object.geometry) {
-            object.geometry.dispose();
-          }
-          
-          if (object.material) {
-            // Gérer les matériaux simples et les tableaux de matériaux
-            if (Array.isArray(object.material)) {
-              object.material.forEach(material => {
-                this.disposeMaterial(material);
-              });
-            } else {
-              this.disposeMaterial(object.material);
-            }
-          }
-          
-          // Supprimer les références cycliques
-          object.parent?.remove(object);
-        }
-      });
-    }
-    
-    // Nettoyer les modèles
     Object.values(this.models).forEach(model => {
       model.traverse((object) => {
         if (object instanceof THREE.Mesh) {
@@ -960,71 +870,12 @@ private moveCamera() {
         }
       });
     });
-    
-    // Vider les références aux modèles
     this.models = {};
-    
-    // Nettoyer le renderer
-    if (this.renderer) {
-      this.renderer.dispose();
-      this.renderer.forceContextLoss();
-      this.renderer.domElement?.remove();
-      // Ne pas assigner null pour éviter les erreurs de type
-      // this.renderer est toujours défini mais inutilisable après dispose
-    }
-    
-    // Ne pas assigner null aux propriétés de type non-nullable
-    // Marquer simplement comme non initialisé
-    this.initialized = false;
+    super.dispose();
   }
   
   /**
    * Méthode auxiliaire pour nettoyer un matériau et ses ressources associées
    */
-  private disposeMaterial(material: THREE.Material): void {
-    // Disposer des textures de base (présentes sur tous les types de matériaux supportés)
-    if (material instanceof THREE.MeshBasicMaterial) {
-      if (material.map) material.map.dispose();
-      if (material.lightMap) material.lightMap.dispose();
-      if (material.aoMap) material.aoMap.dispose();
-      if (material.alphaMap) material.alphaMap.dispose();
-      if (material.envMap) material.envMap.dispose();
-    }
-    
-    // Disposer des textures spécifiques à MeshStandardMaterial
-    if (material instanceof THREE.MeshStandardMaterial) {
-      if (material.map) material.map.dispose();
-      if (material.lightMap) material.lightMap.dispose();
-      if (material.aoMap) material.aoMap.dispose();
-      if (material.emissiveMap) material.emissiveMap.dispose();
-      if (material.normalMap) material.normalMap.dispose();
-      if (material.roughnessMap) material.roughnessMap.dispose();
-      if (material.metalnessMap) material.metalnessMap.dispose();
-      if (material.alphaMap) material.alphaMap.dispose();
-      if (material.envMap) material.envMap.dispose();
-    }
-    
-    // Disposer des textures spécifiques à MeshPhongMaterial
-    if (material instanceof THREE.MeshPhongMaterial) {
-      if (material.map) material.map.dispose();
-      if (material.lightMap) material.lightMap.dispose();
-      if (material.aoMap) material.aoMap.dispose();
-      if (material.emissiveMap) material.emissiveMap.dispose();
-      if (material.alphaMap) material.alphaMap.dispose();
-      if (material.envMap) material.envMap.dispose();
-    }
-    
-    // Pour les matériaux de shader, nettoyer les uniforms avec des textures
-    if (material instanceof THREE.ShaderMaterial) {
-      for (const uniformName in material.uniforms) {
-        const uniform = material.uniforms[uniformName];
-        if (uniform && uniform.value instanceof THREE.Texture) {
-          uniform.value.dispose();
-        }
-      }
-    }
-    
-    // Disposer le matériau lui-même
-    material.dispose();
-  }
+
 }

@@ -21,9 +21,7 @@ export interface SimpleLight {
  * Interface pour les lumières Three.js avec intensité
  * Cette interface est nécessaire pour le cast typé de propriétés Three.js
  */
-export interface LightWithIntensity extends THREE.Light {
-  intensity: number;
-}
+
 
 // Les autres interfaces redondantes ont été supprimées car Three.js
 // inclut déjà ces propriétés dans ses types
@@ -119,7 +117,7 @@ export class LightService {
           switch (property) {
             case 'intensity':
               if ('intensity' in obj) {
-                (obj as LightWithIntensity).intensity = value;
+                (obj as any).intensity = value;
                 obj.visible = value > 0;
               }
               break;
@@ -131,10 +129,10 @@ export class LightService {
             case 'visibility':
               obj.visible = value;
               if (!value && 'intensity' in obj) {
-                (obj as LightWithIntensity).intensity = 0;
+                (obj as any).intensity = 0;
               } else if (value && 'intensity' in obj) {
                 const intensityToRestore = (lightObj as any).originalIntensity || lightObj.intensity;
-                (obj as LightWithIntensity).intensity = intensityToRestore;
+                (obj as any).intensity = intensityToRestore;
               }
               break;
             case 'castShadow':
@@ -177,9 +175,7 @@ export class LightService {
   /**
    * Définir l'intensité d'une lumière par son nom
    */
-  setLightIntensity(lightName: string, intensity: number): void {
-    this.setLightProperty(lightName, 'intensity', intensity);
-  }
+
   
   /**
    * Définir si une lumière projette des ombres
@@ -230,13 +226,13 @@ export class LightService {
             if (light.intensity > 0) {
               (light as any).originalIntensity = light.intensity;
             }
-            (threeLight as LightWithIntensity).intensity = 0;
+            (threeLight as any).intensity = 0;
           } else if (changes.enabled && 'intensity' in threeLight) {
             // Restaurer l'intensité originale ou utiliser celle spécifiée
             const intensityToRestore = changes.intensity !== undefined 
               ? changes.intensity 
               : ((light as any).originalIntensity || light.intensity);
-            (threeLight as LightWithIntensity).intensity = intensityToRestore;
+            (threeLight as any).intensity = intensityToRestore;
           }
         }
 
@@ -333,7 +329,7 @@ export class LightService {
     
     // Sinon, désactiver les ombres pour la lumière existante et ajouter la nouvelle
     (lightToDisable as any).castShadow = false;
-    console.log(`🔄 Limitation des ombres: désactivation pour ${lightToDisable.name} et activation pour ${light.name}`);    // Mettre à jour l'interface SimpleLight correspondante
+    // Limitation des ombres: désactivation pour ${lightToDisable.name} et activation pour ${light.name}
     const lightObj = this.simpleLights.find(l => l.name === lightToDisable.name && l.scene === sceneType);
     if (lightObj) {
       lightObj.castShadow = false;
@@ -907,10 +903,10 @@ export class LightService {
    */
   logAllLightsDetailed(): void {
     // Suppression des logs redondants et inutiles
-    console.log('=== LOG DÉTAILLÉ DE TOUTES LES LUMIÈRES ===');
+    // === LOG DÉTAILLÉ DE TOUTES LES LUMIÈRES ===
     
     this.sceneRefs.forEach(({ scene, type }) => {
-      console.log(`🎬 SCÈNE: ${type.toUpperCase()}`);
+      // 🎬 SCÈNE: ${type.toUpperCase()}
 
       let lightCount = 0;
       scene.traverse(obj => {
@@ -918,40 +914,40 @@ export class LightService {
           lightCount++;
 
           // Informations de base
-          console.log(`💡 Lumière #${lightCount}: ${obj.name || 'Sans nom'}`);
-          console.log(`   Type: ${this.getLightType(obj)}`);
-          console.log(`   Intensité: ${this.getLightIntensity(obj)}`);
-          console.log(`   Couleur: ${this.getLightColor(obj)}`);
-          console.log(`   Visible: ${obj.visible}`);
+          // 💡 Lumière #${lightCount}: ${obj.name || 'Sans nom'}
+          //    Type: ${this.getLightType(obj)}
+          //    Intensité: ${this.getLightIntensity(obj)}
+          //    Couleur: ${this.getLightColor(obj)}
+          //    Visible: ${obj.visible}
 
           // Position (pour les lumières qui en ont une)
           if ('position' in obj) {
             const pos = (obj as any).position;
-            console.log(`   Position: x=${pos.x.toFixed(3)}, y=${pos.y.toFixed(3)}, z=${pos.z.toFixed(3)}`);
+            //    Position: x=${pos.x.toFixed(3)}, y=${pos.y.toFixed(3)}, z=${pos.z.toFixed(3)}
           }
 
           // Propriétés spécifiques selon le type
           if (obj instanceof THREE.DirectionalLight) {
             const target = obj.target;
-            console.log(`   Target position: x=${target.position.x.toFixed(3)}, y=${target.position.y.toFixed(3)}, z=${target.position.z.toFixed(3)}`);
+            //    Target position: x=${target.position.x.toFixed(3)}, y=${target.position.y.toFixed(3)}, z=${target.position.z.toFixed(3)}
           }
 
           // Informations sur les ombres
           if (obj.castShadow && obj.shadow) {
-            console.log(`   Shadow map size: ${obj.shadow.mapSize.width}x${obj.shadow.mapSize.height}`);
-            console.log(`   Shadow bias: ${obj.shadow.bias}`);
+            //    Shadow map size: ${obj.shadow.mapSize.width}x${obj.shadow.mapSize.height}
+            //    Shadow bias: ${obj.shadow.bias}
           }
         }
       });
 
       if (lightCount === 0) {
-        console.log('   Aucune lumière trouvée dans cette scène');
+        //    Aucune lumière trouvée dans cette scène
       } else {
-        console.log(`   Total: ${lightCount} lumière(s) dans la scène ${type}`);
+        //    Total: ${lightCount} lumière(s) dans la scène ${type}
       }
     });
     
-    console.log('=== FIN DU LOG DES LUMIÈRES ===');
+    // === FIN DU LOG DES LUMIÈRES ===
   }
 
   /**
@@ -1028,7 +1024,7 @@ export class LightService {
     // Utiliser les valeurs passées en paramètre ou les valeurs par défaut
     const targetValues = initialValues || defaultValues;
     
-    console.log('🔥 CRÉATION DES LUMIÈRES AVEC ANIMATION VERS:', targetValues);
+    // 🔥 CRÉATION DES LUMIÈRES AVEC ANIMATION VERS: targetValues
 
     // ÉTAPE 1: Supprimer toutes les lumières existantes importées depuis les modèles GLTF
     const lightsToRemove: THREE.Light[] = [];
@@ -1048,7 +1044,7 @@ export class LightService {
     const ambient = new THREE.AmbientLight('#ffffff', 0);
     ambient.name = 'Lumière ambiante';
     scene.add(ambient);
-    console.log('✅ Ambiante créée avec intensité:', ambient.intensity);
+    // ✅ Ambiante créée avec intensité: ambient.intensity
 
     // Réinitialiser le suivi des lumières projetant des ombres pour cette scène
     this.shadowCastingLights.set('navbar', []);
@@ -1062,7 +1058,7 @@ export class LightService {
     this.configureShadowsForLight(directional);
     scene.add(directional);
     this.manageShadowCastingLights(directional, 'navbar');
-    console.log('✅ Directionnelle créée avec intensité:', directional.intensity);
+    // ✅ Directionnelle créée avec intensité: directional.intensity
 
     const sun = new THREE.DirectionalLight('#ffffff', 0);
     sun.position.set(0.000, 20.903, 0.000);
@@ -1072,7 +1068,7 @@ export class LightService {
     this.configureShadowsForLight(sun);
     scene.add(sun);
     this.manageShadowCastingLights(sun, 'navbar');
-    console.log('✅ Sun créée avec intensité:', sun.intensity);
+    // ✅ Sun créée avec intensité: sun.intensity
 
     const spotPrincipal = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 1, 2);
     spotPrincipal.position.set(1.642, 12.590, -8.854);
@@ -1082,7 +1078,7 @@ export class LightService {
     this.configureShadowsForLight(spotPrincipal);
     scene.add(spotPrincipal);
     this.manageShadowCastingLights(spotPrincipal, 'navbar');
-    console.log('✅ SpotPrincipal créée avec intensité:', spotPrincipal.intensity);
+    // ✅ SpotPrincipal créée avec intensité: spotPrincipal.intensity
 
     // Lumières avec potentiellement pas d'ombres selon les limites
     const spotBD = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
@@ -1093,7 +1089,7 @@ export class LightService {
     this.configureShadowsForLight(spotBD);
     scene.add(spotBD);
     this.manageShadowCastingLights(spotBD, 'navbar');
-    console.log('✅ SpotBD créée avec intensité:', spotBD.intensity);
+    // ✅ SpotBD créée avec intensité: spotBD.intensity
 
     const spotHD = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
     spotHD.position.set(-61.144, 12.193, 46.533);
@@ -1174,7 +1170,7 @@ export class LightService {
         if (threeLight) {
           threeLight.visible = false;
           if ('intensity' in threeLight) {
-            (threeLight as LightWithIntensity).intensity = 0;
+            (threeLight as any).intensity = 0;
           }
         }
       });
@@ -1204,7 +1200,7 @@ export class LightService {
         if (threeLight) {
           threeLight.visible = true;
           if ('intensity' in threeLight) {
-            (threeLight as LightWithIntensity).intensity = originalIntensity;
+            (threeLight as any).intensity = originalIntensity;
           }
         }
       });
@@ -1284,13 +1280,7 @@ export class LightService {
     this.setLightProperty(lightName, 'visibility', false);
   }
 
-  syncLightEnabledState(lightName: string): void {
-    const lightObj = this.simpleLights.find(l => l.name === lightName);
-    if (!lightObj) return;
-    
-    lightObj.enabled = lightObj.intensity > 0;
-    this.simpleLightsSubject.next([...this.simpleLights]);
-  }
+
 
   syncAllLightsEnabledState(): void {
     let hasChanges = false;
@@ -1314,7 +1304,7 @@ export class LightService {
   animateLightsIntensity(targetValues: { [lightName: string]: number }, duration: number = 2): void {
     // Démarrer toutes les lumières à 0
     Object.keys(targetValues).forEach(lightName => {
-      this.setLightIntensity(lightName, 0);
+      this.setLightProperty(lightName, 'intensity', 0);
     });
 
     // Calculer les valeurs d'incrémentation par frame
@@ -1341,7 +1331,7 @@ export class LightService {
         );
         
         // Mettre à jour l'intensité
-        this.setLightIntensity(lightName, newIntensity);
+        this.setLightProperty(lightName, 'intensity', newIntensity);
       });
 
       // Continuer l'animation si nécessaire
