@@ -36,6 +36,14 @@ export class BackgroundThreeService {
   private qualityLevel: 'low' | 'medium' | 'high' = 'medium';
   private qualitySettings: QualitySettings = QUALITY_PRESETS['medium'];
   private initialized = false;
+  private lastWidth = 0;
+  private lastHeight = 0;
+  private resizeTimeout: any = null;
+  private needsUpdate = true;
+
+  // Ajoute ces propriétés à la classe
+  private cameraTargetPosition = new THREE.Vector3(-3, 0, 300);
+  private cameraTargetRotationY = THREE.MathUtils.degToRad(-3.69);
 
   constructor() {
     this.detectPerformanceLevel();
@@ -150,16 +158,45 @@ export class BackgroundThreeService {
   }
   
   /**
-   * Configure les event listeners avec throttling pour réduire les appels
+   * Fonction pour lisser les événements avec une courbe d'easing
+   * Plus sophistiqué que throttle pour les mouvements de caméra
    */
-  private setupEventListeners(): void {
-    this.boundMoveCamera = this.throttle(this.moveCamera.bind(this), 100); // Throttle à 100ms
-    this.boundMouseMove = this.throttle(this.handleMouseMove.bind(this), 50); // Throttle à 50ms
+  private smoothEvent(callback: Function, delay: number): (...args: any[]) => void {
+    let lastCall = 0;
+    let requestId: number | null = null;
+    let lastArgs: any[] = [];
     
-    window.addEventListener('scroll', this.boundMoveCamera, { passive: true });
-    window.addEventListener('mousemove', this.boundMouseMove, { passive: true });
-    window.addEventListener('resize', this.onResize.bind(this));
+    return (...args: any[]) => {
+      lastArgs = args;
+      const now = Date.now();
+      
+      // Si c'est le premier appel ou si le délai est écoulé, exécuter immédiatement
+      if (now - lastCall >= delay) {
+        lastCall = now;
+        callback(...args);
+      } else if (!requestId) {
+        // Sinon, planifier une exécution différée pour un mouvement fluide
+        requestId = window.setTimeout(() => {
+          lastCall = Date.now();
+          requestId = null;
+          callback(...lastArgs);
+        }, delay - (now - lastCall));
+      }
+    };
   }
+  
+  /**
+   * Configure les event listeners avec throttling amélioré pour des mouvements fluides
+   */
+private setupEventListeners(): void {
+  // Throttle scroll event for camera movement
+  this.boundMoveCamera = this.throttle(this.moveCamera.bind(this), 30); // 30ms throttle for scroll
+  this.boundMouseMove = this.throttle(this.handleMouseMove.bind(this), 50);
+
+  window.addEventListener('scroll', this.boundMoveCamera, { passive: true });
+  window.addEventListener('mousemove', this.boundMouseMove, { passive: true });
+  window.addEventListener('resize', this.onResize.bind(this));
+}
 
   /**
    * Gère le mouvement de la souris
@@ -167,8 +204,6 @@ export class BackgroundThreeService {
   private handleMouseMove(event: MouseEvent): void {
     this.mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    // Demander un rendu lorsque la souris bouge
-    this.needsUpdate = true;
   };
 
   /**
@@ -552,143 +587,100 @@ export class BackgroundThreeService {
    * Indicateur pour savoir si un rendu est nécessaire
    * Optimisation: Rendu uniquement lorsque nécessaire
    */
-  private needsUpdate: boolean = true;
+  // Le flag needsUpdate est déjà défini en haut de la classe
   
   /**
-   * Demande un nouveau rendu
+   * Boucle d'animation optimisée avec rendu conditionnel et animations fluides
    */
-  public requestRender(): void {
-    this.needsUpdate = true;
-  }
-  
-  /**
-   * Boucle d'animation optimisée avec rendu conditionnel
-   */
-  private animate(): void {
-    const render = () => {
-      const delta = this.clock.getDelta();
-      this.animationTime += delta;
-      
-      if (this.animationTime > 1000) {
-        this.animationTime = this.animationTime % 1000;
-      }
-      
-      this.updateShaders();
-      this.animateObjects(delta);
-      
-      // Optimisation: Rendu uniquement si nécessaire
-      if (this.needsUpdate) {
-        this.renderer.render(this.scene, this.camera);
-        this.needsUpdate = false;
-      }
-      
-      this.animationId = requestAnimationFrame(render);
-    };
-    
-    render();
-  }
+private animate(): void {
+  const render = () => {
+    // Utiliser un incrément fixe pour une animation stable
+    this.animationTime += 0.01;
+    if (this.animationTime > 1000) {
+      this.animationTime = this.animationTime % 1000;
+    }
+    this.updateShaders();
+    this.animateObjects(0.01); // Utiliser le même incrément fixe
+
+    // Interpolation fluide de la caméra vers la cible
+    const lerpSpeed = 0.08;
+    this.camera.position.lerp(this.cameraTargetPosition, lerpSpeed);
+    this.camera.rotation.y += (this.cameraTargetRotationY - this.camera.rotation.y) * lerpSpeed;
+
+    this.renderer.render(this.scene, this.camera);
+    this.animationId = requestAnimationFrame(render);
+  };
+  render();
+}
 
   /**
-   * Met à jour les shaders
+   * Met à jour les shaders de façon simple et directe
    */
   private updateShaders(): void {
-    // Uniquement mettre à jour les shaders toutes les N frames pour économiser des ressources
-    const updateInterval = this.qualityLevel === 'low' ? 5 : (this.qualityLevel === 'medium' ? 3 : 1);
-    
-    // Si on n'est pas sur une frame d'update de shader, retourner immédiatement
-    if (Math.floor(this.animationTime * 60) % updateInterval !== 0) {
-      return;
-    }
-    
-    let shadersUpdated = false;
-    
+    // Mettre à jour les shaders avec uniforms time
     this.scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
+        // Pour les ShaderMaterial classiques
         if (child.material instanceof THREE.ShaderMaterial && 
             child.material.uniforms && 
             child.material.uniforms['time'] !== undefined) {
           child.material.uniforms['time'].value = this.animationTime;
-          shadersUpdated = true;
         }
+        // Pour les matériaux avec onBeforeCompile
         else if (child.material instanceof THREE.MeshBasicMaterial && 
                  child.material.userData && 
                  child.material.userData['shader'] && 
                  child.material.userData['shader'].uniforms && 
                  child.material.userData['shader'].uniforms['time']) {
           child.material.userData['shader'].uniforms['time'].value = this.animationTime;
-          shadersUpdated = true;
         }
       }
     });
-    
-    // Si des shaders ont été mis à jour, demander un rendu
-    if (shadersUpdated) {
-      this.needsUpdate = true;
-    }
   }
 
   /**
-   * Anime les objets
+   * Anime les objets de façon simple et directe
    */
   private animateObjects(delta: number): void {
-    const frameMultiplier = delta * 60;
-    let objectsAnimated = false;
-    
+    // Animation des modèles si nécessaire
     if (this.models['prisme']) {
-      this.models['prisme'].rotation.y += 0.005 * frameMultiplier;
-      objectsAnimated = true;
+      // Rotation continue indépendante du scroll
+      this.models['prisme'].rotation.y += 0.005;
     }
     
-    if (this.models['scene_bureau']) {
-      const bureau = this.models['scene_bureau'];
-      const initialRotationY = THREE.MathUtils.degToRad(-35);
-      
-      // Uniquement mettre à jour si la souris a réellement changé de position
-      const newRotX = this.mouseY * 0.01;
-      const newRotY = initialRotationY + this.mouseX * 0.01;
-      
-      if (Math.abs(bureau.rotation.x - newRotX) > 0.0001 || 
-          Math.abs(bureau.rotation.y - newRotY) > 0.0001) {
-        bureau.rotation.x = newRotX;
-        bureau.rotation.y = newRotY;
-        objectsAnimated = true;
-      }
-      
-      const t = document.body.getBoundingClientRect().top;
-      if (t >= -850 && t <= -650) {
-        const newRotZ = Math.sin(this.animationTime * 2) * 0.01;
-        if (Math.abs(bureau.rotation.z - newRotZ) > 0.0001) {
-          bureau.rotation.z = newRotZ;
-          objectsAnimated = true;
-        }
-      } else if (bureau.rotation.z !== 0) {
-        bureau.rotation.z *= 0.95;
-        if (Math.abs(bureau.rotation.z) > 0.0001) {
-          objectsAnimated = true;
-        } else {
-          bureau.rotation.z = 0;
-        }
-      }
-    }
-    
-    let prismCount = 0;
+    // Animation des prismes clonés pour plus de dynamisme
     this.scene.children.forEach(child => {
       if (child instanceof THREE.Group && 
           child !== this.models['prisme'] && 
           child !== this.models['scene_fond'] &&
-          child !== this.models['scene_bureau'] &&
-          prismCount < this.qualitySettings.prismCount) {
-        
-        child.rotation.x += 0.002 * frameMultiplier;
-        child.rotation.y += 0.003 * frameMultiplier;
-        prismCount++;
-        objectsAnimated = true;
+          child !== this.models['scene_bureau']) {
+        child.rotation.x += 0.002;
+        child.rotation.y += 0.003;
       }
     });
     
-    // Si des objets ont été animés, demander un rendu
-    if (objectsAnimated) {
-      this.needsUpdate = true;
+    // Animation du bureau basée sur la souris
+    if (this.models['scene_bureau']) {
+      const bureau = this.models['scene_bureau'];
+
+      // Rotation initiale sur Y (base)
+      const initialRotationY = THREE.MathUtils.degToRad(-35);
+
+      // Ajouter une rotation basée sur la souris
+      const mouseRotationX = this.mouseY * 0.01; // Rotation subtile sur X
+      const mouseRotationY = this.mouseX * 0.01; // Rotation subtile sur Y
+
+      // Appliquer les rotations en ajoutant à la rotation initiale
+      bureau.rotation.x = mouseRotationX; // Rotation sur X basée sur la souris
+      bureau.rotation.y = initialRotationY + mouseRotationY; // Rotation sur Y basée sur la souris
+
+      // Oscillation sur Z uniquement dans la zone de stagnation
+      const t = document.body.getBoundingClientRect().top;
+      if (t >= -850 && t <= -650) {
+        bureau.rotation.z = Math.sin(this.animationTime * 2) * 0.01; // Oscillation subtile avec temps normalisé
+      } else {
+        bureau.rotation.z *= 0.95; // Réduction progressive hors de la zone
+      }
     }
   }
 
@@ -717,86 +709,138 @@ export class BackgroundThreeService {
   };
   
   // Cache pour éviter les calculs répétitifs
-  private lastScrollTop: number = 0;
-  private scrollSection: number = 0;
+  private lastScrollTop = 0;
+  private scrollSection = 0;
+  
+  // Positions et rotations cibles pour l'animation fluide
+  private targetPosition = new THREE.Vector3();
+  private currentLerpPosition = new THREE.Vector3();
+  private targetRotationY = 0;
+  private currentLerpRotationY = 0;
+  private isAnimatingCamera = false;
+  private cameraAnimationProgress = 0;
   
   /**
-   * Déplace la caméra selon le scroll avec des optimisations de performances
+   * Fonction d'easing pour des transitions plus fluides
+   * Cette fonction crée une courbe d'accélération-décélération plus naturelle
    */
-  private moveCamera(): void {
-    const t = document.body.getBoundingClientRect().top;
-    
-    // Si le scroll n'a pas changé significativement, éviter le recalcul
-    if (Math.abs(t - this.lastScrollTop) < 5) {
-      return;
-    }
-    
-    this.lastScrollTop = t;
-    this.needsUpdate = true;
-    
-    // Déterminer la section actuelle pour éviter des comparaisons répétitives
-    let currentSection = 0;
-    if (t > this.scrollThresholds.section1) currentSection = 1;
-    else if (t >= this.scrollThresholds.section2 && t <= this.scrollThresholds.section1) currentSection = 2;
-    else if (t > this.scrollThresholds.section3 && t <= this.scrollThresholds.section2) currentSection = 3;
-    else if (t >= this.scrollThresholds.section4 && t <= this.scrollThresholds.section3) currentSection = 4;
-    else currentSection = 5;
-    
-    // Si la section n'a pas changé, éviter certains calculs
-    if (currentSection === this.scrollSection && 
-        (currentSection === 2 || currentSection === 4)) {
-      return;
-    }
-    
-    this.scrollSection = currentSection;
-    
-    // Utiliser les points pré-calculés
-    const { initial, bureau, fond } = this.cameraPoints;
-    
-    switch (currentSection) {
-      case 1: // Section 1: Transition initiale vers bureau
-        const progress1 = Math.abs(t) / Math.abs(this.scrollThresholds.section1);
-        this.camera.position.lerpVectors(initial.position, bureau.position, progress1);
-        this.camera.rotation.y = initial.rotation + (bureau.rotation - initial.rotation) * progress1;
-        break;
-        
-      case 2: // Section 2: Bureau fixe
-        this.camera.position.copy(bureau.position);
-        this.camera.rotation.y = bureau.rotation;
-        break;
-        
-      case 3: // Section 3: Transition bureau vers fond
-        const progress3 = (Math.abs(t) - Math.abs(this.scrollThresholds.section2)) / 
-                        (Math.abs(this.scrollThresholds.section3) - Math.abs(this.scrollThresholds.section2));
-        this.camera.position.lerpVectors(bureau.position, fond.position, progress3);
-        
-        const additionalRotation = THREE.MathUtils.degToRad(-40);
-        const targetRotation = fond.rotation + additionalRotation;
-        this.camera.rotation.y = bureau.rotation + (targetRotation - bureau.rotation) * progress3;
-        break;
-        
-      case 4: // Section 4: Fond fixe
-        this.camera.position.copy(fond.position);
-        this.camera.rotation.y = fond.rotation + THREE.MathUtils.degToRad(-40);
-        break;
-        
-      case 5: // Section 5: Fin du scroll
-        const progress5 = (Math.abs(t) - Math.abs(this.scrollThresholds.section4)) / 400;
-        const endPos = new THREE.Vector3(
-          fond.position.x + progress5 * 20,
-          fond.position.y - progress5 * 10,
-          fond.position.z + progress5 * 50
-        );
-        this.camera.position.copy(endPos);
-        this.camera.rotation.y = fond.rotation + THREE.MathUtils.degToRad(-40);
-        break;
-    }
+  private easeInOutCubic(t: number): number {
+    // Assurer que t est dans la plage [0,1]
+    t = Math.max(0, Math.min(1, t));
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
-
-  // Variables pour limiter les redimensionnements
-  private lastWidth: number = 0;
-  private lastHeight: number = 0;
-  private resizeTimeout: any = null;
+  
+  /**
+   * Déplace la caméra selon le scroll avec des transitions ultra fluides
+   */
+private moveCamera() {
+  const t = document.body.getBoundingClientRect().top;
+  const initialPosition = { x: -3, y: 0, z: 300 };
+  const bureauPosition = { x: 16, y: -20, z: 9.5 };
+  const fondPosition = { x: 62, y: 30, z: -70 };
+  const initialRotation = THREE.MathUtils.degToRad(-3.69);
+  const bureauRotation = THREE.MathUtils.degToRad(-3.69 + 35);
+  const fondRotation = THREE.MathUtils.degToRad(-3.69 + 70);
+  let target = { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z, ry: this.camera.rotation.y };
+  if (t > -650) {
+    const progress = Math.abs(t) / 650;
+    target.x = initialPosition.x + (bureauPosition.x - initialPosition.x) * progress;
+    target.y = initialPosition.y + (bureauPosition.y - initialPosition.y) * progress;
+    target.z = initialPosition.z + (bureauPosition.z - initialPosition.z) * progress;
+    target.ry = initialRotation + (bureauRotation - initialRotation) * progress;
+  } else if (t >= -1050 && t <= -650) {
+    target.x = bureauPosition.x;
+    target.y = bureauPosition.y;
+    target.z = bureauPosition.z;
+    target.ry = bureauRotation;
+  } else if (t > -1800 && t <= -1050) {
+    const progress = (Math.abs(t) - 1050) / 750;
+    target.x = bureauPosition.x + (fondPosition.x - bureauPosition.x) * progress;
+    target.y = bureauPosition.y + (fondPosition.y - bureauPosition.y) * progress;
+    target.z = bureauPosition.z + (fondPosition.z - bureauPosition.z) * progress;
+    const additionalRotation = THREE.MathUtils.degToRad(-40);
+    const targetRotation = fondRotation + additionalRotation;
+    target.ry = bureauRotation + (targetRotation - bureauRotation) * progress;
+  } else if (t >= -2100 && t <= -1800) {
+    target.x = fondPosition.x;
+    target.y = fondPosition.y;
+    target.z = fondPosition.z;
+    const additionalRotation = THREE.MathUtils.degToRad(-40);
+    target.ry = fondRotation + additionalRotation;
+  } else {
+    const progress = (Math.abs(t) - 2100) / 400;
+    target.x = fondPosition.x + progress * 20;
+    target.y = fondPosition.y + progress * -10;
+    target.z = fondPosition.z + progress * 50;
+    const additionalRotation = THREE.MathUtils.degToRad(-40);
+    target.ry = fondRotation + additionalRotation;
+  }
+  // Stocke la cible
+  this.cameraTargetPosition.set(target.x, target.y, target.z);
+  this.cameraTargetRotationY = target.ry;
+}
+  
+  /**
+   * Mettre à jour l'animation de la caméra
+   * @param delta Temps delta optionnel (en secondes)
+   */
+  private updateCameraAnimation(delta?: number): void {
+    if (!this.isAnimatingCamera) return;
+    
+    // Utiliser delta time pour une vitesse constante indépendante du FPS
+    const step = delta ? delta * 2.0 : 0.033; // Augmenté pour une animation plus rapide mais toujours fluide
+    
+    // Progression de l'animation (0 à 1)
+    this.cameraAnimationProgress += step;
+    
+    // Assurer que nous ne dépassons jamais 1
+    if (this.cameraAnimationProgress >= 1) {
+      // Animation terminée
+      this.isAnimatingCamera = false;
+      this.cameraAnimationProgress = 1;
+      this.camera.position.copy(this.targetPosition);
+      this.camera.rotation.y = this.targetRotationY;
+      return;
+    }
+    
+    // Utiliser une fonction d'easing améliorée pour plus de fluidité
+    // Choisir la fonction d'easing la plus appropriée
+    let easedProgress;
+    
+    // Pour un mouvement plus naturel et vraiment fluide
+    if (this.cameraAnimationProgress < 0.5) {
+      // Accélération en début d'animation (départ doux)
+      easedProgress = this.easeInQuad(this.cameraAnimationProgress * 2) / 2;
+    } else {
+      // Décélération en fin d'animation (arrivée douce)
+      easedProgress = 0.5 + this.easeOutQuint((this.cameraAnimationProgress - 0.5) * 2) / 2;
+    }
+    
+    // Interpolation fluide vers la cible avec THREE.Vector3.lerp pour plus de précision
+    this.camera.position.lerpVectors(this.currentLerpPosition, this.targetPosition, easedProgress);
+    
+    // Utiliser MathUtils.lerp pour la rotation afin d'éviter des sauts
+    this.camera.rotation.y = THREE.MathUtils.lerp(
+      this.currentLerpRotationY, 
+      this.targetRotationY, 
+      easedProgress
+    );
+  }
+  
+  /**
+   * Fonction d'easing pour le début d'animation (accélération)
+   */
+  private easeInQuad(t: number): number {
+    return t * t;
+  }
+  
+  /**
+   * Fonction d'easing pour des transitions encore plus fluides
+   * Cette fonction crée une courbe d'accélération-décélération plus agréable
+   */
+  private easeOutQuint(t: number): number {
+    return 1 - Math.pow(1 - t, 5);
+  }
   
   /**
    * Gère le redimensionnement avec debouncing et caching
@@ -833,9 +877,6 @@ export class BackgroundThreeService {
         // Mettre à jour les dernières dimensions connues
         this.lastWidth = width;
         this.lastHeight = height;
-        
-        // Demander un rendu
-        this.needsUpdate = true;
       }
       
       this.resizeTimeout = null;
@@ -863,6 +904,8 @@ export class BackgroundThreeService {
       this.boundMouseMove = null;
     }
     
+    // Utiliser une référence liée déjà existante serait préférable ici
+    // mais nous utilisons un nouveau bind pour correspondre à celui utilisé lors de l'ajout
     window.removeEventListener('resize', this.onResize.bind(this));
     
     // Annuler tout timeout en attente
