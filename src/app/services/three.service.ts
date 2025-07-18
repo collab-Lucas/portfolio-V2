@@ -203,6 +203,48 @@ export class ThreeService {
   }
 
   /**
+   * Désactive complètement toutes les lumières (visible = false et intensity = 0)
+   */
+  disableAllLights(): void {
+    this.lightService.disableAllLights();
+  }
+
+  /**
+   * Réactive toutes les lumières avec leurs intensités originales
+   */
+  enableAllLights(): void {
+    this.lightService.enableAllLights();
+  }
+
+  /**
+   * Méthode de débogage pour diagnostiquer les problèmes de désactivation des lumières
+   */
+  debugLightDisabling(lightName: string): void {
+    this.lightService.debugLightDisabling(lightName);
+  }
+
+  /**
+   * Force la désactivation complète d'une lumière récalcitrante
+   */
+  forceDisableLight(lightName: string): void {
+    this.lightService.forceDisableLight(lightName);
+  }
+
+  /**
+   * Synchronise l'état enabled d'une lumière avec son intensité
+   */
+  syncLightEnabledState(lightName: string): void {
+    this.lightService.syncLightEnabledState(lightName);
+  }
+
+  /**
+   * Synchronise l'état de toutes les lumières
+   */
+  syncAllLightsEnabledState(): void {
+    this.lightService.syncAllLightsEnabledState();
+  }
+
+  /**
    * Cette méthode ne fait rien car l'animation est gérée dans les services spécialisés
    * mais est fournie pour la compatibilité avec l'ancienne API
    */

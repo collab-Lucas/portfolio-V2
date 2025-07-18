@@ -29,7 +29,10 @@ import { trigger, transition, style, animate } from '@angular/animations';
         <div class="panel-content">          <div class="light-control" *ngFor="let light of filteredLights">
             <div class="light-header">
               <label class="text-white d-flex align-items-center">
-                <img [src]="getLightIcon(light.type)" class="light-icon me-2" alt="{{ light.name }}" />
+                <img [src]="getLightIcon(light.type)" 
+                     class="light-icon me-2" 
+                     [class.point-light-icon]="light.type === 'PointLight'"
+                     alt="{{ light.name }}" />
                 {{ light.name }}
               </label>
               <div class="light-actions">
@@ -503,6 +506,18 @@ import { trigger, transition, style, animate } from '@angular/animations';
       height: 20px;
       object-fit: contain;
       filter: brightness(1.2);
+    }
+
+    /* Style spécifique pour l'icône de lumière ponctuelle */
+    .point-light-icon {
+      transform: scale(0.8) rotate(15deg);
+      opacity: 0.9;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .point-light-icon:hover {
+      transform: scale(0.85) rotate(20deg);
+      opacity: 1;
     }
 
     /* Styles pour les contrôles de lumière */
@@ -1684,7 +1699,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
       case 'DirectionalLight':
         return 'assets/img/brands/logo direct.png';  // Image pour lumière directionnelle
       case 'PointLight':
-        return 'assets/img/brands/logo site2.png';   // Image pour lumière ponctuelle
+        return 'assets/img/brands/logo ambient.png'; // Utilise la même icône que AmbientLight
       case 'SpotLight':
         return 'assets/img/brands/logo spotlight-clear.png'; // Image pour spotlight
       case 'HemisphereLight':

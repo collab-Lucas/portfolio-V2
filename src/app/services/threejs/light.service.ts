@@ -92,35 +92,66 @@ export class LightService {
 
   /**
    * Définir l'intensité d'une lumière par son nom
+   * Version améliorée avec recherche exhaustive
    */
   setLightIntensity(lightName: string, intensity: number): void {
     // Si l'intensité est 0, désactiver la lumière complètement
     const shouldDisable = intensity === 0;
+    const shouldEnable = intensity > 0;
     
     // Trouver la lumière dans notre liste
     const lightObj = this.simpleLights.find(l => l.name === lightName);
-    if (!lightObj) return;
+    if (!lightObj) {
+      console.warn(`⚠️ Lumière "${lightName}" non trouvée dans la liste SimpleLight`);
+      return;
+    }
     
     // Mettre à jour SimpleLight
     lightObj.intensity = intensity;
     if (shouldDisable) {
       lightObj.enabled = false;
+    } else if (shouldEnable) {
+      // CORRECTION: Réactiver la lumière quand l'intensité > 0
+      lightObj.enabled = true;
     }
     
-    // Mettre à jour la lumière dans toutes les scènes qui la contiennent
-    const relevantScenes = this.sceneRefs.filter(ref => ref.type === lightObj.scene);
-    
-    relevantScenes.forEach(({ scene }) => {      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
+    // Mettre à jour la lumière dans TOUTES les scènes (pas seulement celles filtrées par type)
+    // Cela corrige le problème où certaines lumières ne sont pas trouvées
+    this.sceneRefs.forEach(({ scene, type }) => {
+      // Méthode 1: Recherche par nom direct
+      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
       if (threeLight && 'intensity' in threeLight) {
         (threeLight as LightWithIntensity).intensity = intensity;
         if (shouldDisable) {
           threeLight.visible = false;
+          // S'assurer que l'intensité est bien à 0 pour une désactivation complète
+          (threeLight as LightWithIntensity).intensity = 0;
+        } else if (shouldEnable) {
+          // CORRECTION: Réactiver la lumière si l'intensité > 0
+          threeLight.visible = true;
         }
       }
+      
+      // Méthode 2: Recherche exhaustive par traverse (sécurité supplémentaire)
+      scene.traverse(obj => {
+        if (obj instanceof THREE.Light && obj.name === lightName && 'intensity' in obj) {
+          (obj as LightWithIntensity).intensity = intensity;
+          if (shouldDisable) {
+            obj.visible = false;
+            (obj as LightWithIntensity).intensity = 0;
+          } else if (shouldEnable) {
+            // CORRECTION: Réactiver la lumière si l'intensité > 0
+            obj.visible = true;
+          }
+        }
+      });
     });
     
     // Notifier les abonnés
     this.simpleLightsSubject.next([...this.simpleLights]);
+    
+    // CORRECTION: Log pour le débogage
+    console.log(`💡 Lumière "${lightName}" - Intensité: ${intensity}, Enabled: ${lightObj.enabled}`);
   }
 
   /**
@@ -149,23 +180,55 @@ export class LightService {
 
   /**
    * Définir la visibilité d'une lumière par son nom
+   * Version améliorée avec recherche exhaustive
    */
   setLightVisibility(lightName: string, visible: boolean): void {
     // Trouver la lumière dans notre liste
     const lightObj = this.simpleLights.find(l => l.name === lightName);
-    if (!lightObj) return;
+    if (!lightObj) {
+      console.warn(`⚠️ Lumière "${lightName}" non trouvée dans la liste SimpleLight`);
+      return;
+    }
     
     // Mettre à jour SimpleLight
     lightObj.enabled = visible;
     
-    // Mettre à jour la lumière dans toutes les scènes qui la contiennent
-    const relevantScenes = this.sceneRefs.filter(ref => ref.type === lightObj.scene);
+    // Sauvegarder l'intensité originale si on désactive la lumière
+    if (!visible && lightObj.intensity > 0) {
+      (lightObj as any).originalIntensity = lightObj.intensity;
+    }
     
-    relevantScenes.forEach(({ scene }) => {
+    // Mettre à jour la lumière dans TOUTES les scènes (pas seulement celles filtrées par type)
+    this.sceneRefs.forEach(({ scene, type }) => {
+      // Méthode 1: Recherche par nom direct
       const threeLight = scene.getObjectByName(lightName) as THREE.Light;
       if (threeLight) {
         threeLight.visible = visible;
+        
+        // Pour une désactivation complète, mettre aussi l'intensité à 0
+        if (!visible && 'intensity' in threeLight) {
+          (threeLight as LightWithIntensity).intensity = 0;
+        } else if (visible && 'intensity' in threeLight) {
+          // Restaurer l'intensité originale ou utiliser celle du SimpleLight
+          const intensityToRestore = (lightObj as any).originalIntensity || lightObj.intensity;
+          (threeLight as LightWithIntensity).intensity = intensityToRestore;
+          lightObj.intensity = intensityToRestore;
+        }
       }
+      
+      // Méthode 2: Recherche exhaustive par traverse (sécurité supplémentaire)
+      scene.traverse(obj => {
+        if (obj instanceof THREE.Light && obj.name === lightName) {
+          obj.visible = visible;
+          
+          if (!visible && 'intensity' in obj) {
+            (obj as LightWithIntensity).intensity = 0;
+          } else if (visible && 'intensity' in obj) {
+            const intensityToRestore = (lightObj as any).originalIntensity || lightObj.intensity;
+            (obj as LightWithIntensity).intensity = intensityToRestore;
+          }
+        }
+      });
     });
     
     // Notifier les abonnés
@@ -237,6 +300,21 @@ export class LightService {
         // Mettre à jour la visibilité
         if (changes.enabled !== undefined) {
           threeLight.visible = changes.enabled;
+          
+          // Pour une désactivation complète, mettre aussi l'intensité à 0
+          if (!changes.enabled && 'intensity' in threeLight) {
+            // Sauvegarder l'intensité originale
+            if (light.intensity > 0) {
+              (light as any).originalIntensity = light.intensity;
+            }
+            (threeLight as LightWithIntensity).intensity = 0;
+          } else if (changes.enabled && 'intensity' in threeLight) {
+            // Restaurer l'intensité originale ou utiliser celle spécifiée
+            const intensityToRestore = changes.intensity !== undefined 
+              ? changes.intensity 
+              : ((light as any).originalIntensity || light.intensity);
+            (threeLight as LightWithIntensity).intensity = intensityToRestore;
+          }
         }
 
         // Mettre à jour la position
@@ -771,83 +849,52 @@ export class LightService {
    * Affiche toutes les propriétés utiles pour recréer les lumières en code
    */
   logAllLightsDetailed(): void {
+    // Suppression des logs redondants et inutiles
     console.log('=== LOG DÉTAILLÉ DE TOUTES LES LUMIÈRES ===');
     
     this.sceneRefs.forEach(({ scene, type }) => {
-      console.log(`\n🎬 SCÈNE: ${type.toUpperCase()}`);
-      console.log('─'.repeat(50));
-      
+      console.log(`🎬 SCÈNE: ${type.toUpperCase()}`);
+
       let lightCount = 0;
       scene.traverse(obj => {
         if (obj instanceof THREE.Light) {
           lightCount++;
-          
+
           // Informations de base
-          console.log(`\n💡 Lumière #${lightCount}: ${obj.name || 'Sans nom'}`);
+          console.log(`💡 Lumière #${lightCount}: ${obj.name || 'Sans nom'}`);
           console.log(`   Type: ${this.getLightType(obj)}`);
           console.log(`   Intensité: ${this.getLightIntensity(obj)}`);
           console.log(`   Couleur: ${this.getLightColor(obj)}`);
           console.log(`   Visible: ${obj.visible}`);
-          console.log(`   Cast Shadow: ${this.getLightCastShadow(obj)}`);
-          
+
           // Position (pour les lumières qui en ont une)
           if ('position' in obj) {
             const pos = (obj as any).position;
             console.log(`   Position: x=${pos.x.toFixed(3)}, y=${pos.y.toFixed(3)}, z=${pos.z.toFixed(3)}`);
           }
-          
-          // Rotation (pour les lumières qui en ont une)
-          if ('rotation' in obj) {
-            const rot = (obj as any).rotation;
-            console.log(`   Rotation: x=${rot.x.toFixed(3)}, y=${rot.y.toFixed(3)}, z=${rot.z.toFixed(3)}`);
-          }
-          
+
           // Propriétés spécifiques selon le type
           if (obj instanceof THREE.DirectionalLight) {
             const target = obj.target;
             console.log(`   Target position: x=${target.position.x.toFixed(3)}, y=${target.position.y.toFixed(3)}, z=${target.position.z.toFixed(3)}`);
-          } else if (obj instanceof THREE.PointLight) {
-            console.log(`   Distance: ${obj.distance}`);
-            console.log(`   Decay: ${obj.decay}`);
-          } else if (obj instanceof THREE.SpotLight) {
-            console.log(`   Distance: ${obj.distance}`);
-            console.log(`   Angle: ${obj.angle.toFixed(3)} rad (${(obj.angle * 180 / Math.PI).toFixed(1)}°)`);
-            console.log(`   Penumbra: ${obj.penumbra}`);
-            console.log(`   Decay: ${obj.decay}`);
-            const target = obj.target;
-            console.log(`   Target position: x=${target.position.x.toFixed(3)}, y=${target.position.y.toFixed(3)}, z=${target.position.z.toFixed(3)}`);
           }
-          
+
           // Informations sur les ombres
           if (obj.castShadow && obj.shadow) {
             console.log(`   Shadow map size: ${obj.shadow.mapSize.width}x${obj.shadow.mapSize.height}`);
-            if (obj.shadow.camera) {
-              if (obj.shadow.camera instanceof THREE.OrthographicCamera) {
-                const cam = obj.shadow.camera;
-                console.log(`   Shadow camera (ortho): left=${cam.left}, right=${cam.right}, top=${cam.top}, bottom=${cam.bottom}, near=${cam.near}, far=${cam.far}`);
-              } else if (obj.shadow.camera instanceof THREE.PerspectiveCamera) {
-                const cam = obj.shadow.camera;
-                console.log(`   Shadow camera (persp): fov=${cam.fov}, near=${cam.near}, far=${cam.far}`);
-              }
-            }
             console.log(`   Shadow bias: ${obj.shadow.bias}`);
           }
-          
-          // Code pour recréer cette lumière
-          console.log(`   📝 CODE POUR RECRÉER:`);
-          console.log(this.generateLightCreationCode(obj, type));
-          console.log('   ' + '─'.repeat(40));
         }
       });
-      
+
       if (lightCount === 0) {
         console.log('   Aucune lumière trouvée dans cette scène');
       } else {
-        console.log(`\n   Total: ${lightCount} lumière(s) dans la scène ${type}`);
+        console.log(`   Total: ${lightCount} lumière(s) dans la scène ${type}`);
       }
     });
     
-    console.log('\n=== FIN DU LOG DES LUMIÈRES ===');
+    console.log('=== FIN DU LOG DES LUMIÈRES ===');
   }
 
   /**
@@ -906,10 +953,7 @@ export class LightService {
     spotRouge: THREE.SpotLight,
     sun: THREE.DirectionalLight
   } {
-    console.log('🔧 Création des lumières optimisées pour la navbar...');
-
     // ÉTAPE 1: Supprimer toutes les lumières existantes importées depuis les modèles GLTF
-    console.log('🗑️ Suppression des lumières importées existantes...');
     const lightsToRemove: THREE.Light[] = [];
     scene.traverse(obj => {
       if (obj instanceof THREE.Light) {
@@ -918,14 +962,10 @@ export class LightService {
     });
 
     lightsToRemove.forEach(light => {
-      console.log(`   Suppression de: ${light.name || 'Lumière sans nom'} (${light.type})`);
       scene.remove(light);
     });
 
-    console.log(`✅ ${lightsToRemove.length} lumières importées supprimées`);
-
     // ÉTAPE 2: Créer les nouvelles lumières optimisées avec intensités normalisées
-    console.log('🔧 Création des nouvelles lumières optimisées...');
 
     // Création des lumières optimisées
     const ambient = new THREE.AmbientLight('#ffffff', 1.0);
@@ -987,15 +1027,11 @@ export class LightService {
     this.configureShadowsForLight(sun);
     scene.add(sun);
 
-    console.log('✅ 8 nouvelles lumières optimisées créées avec succès !');
-
     // ÉTAPE 3: Enregistrer la scène et actualiser la liste
     this.registerScene(scene, 'navbar');
 
     // Actualiser la liste des lumières
     this.refreshLights([{ scene, type: 'navbar' }]);
-
-    console.log('🎯 Système de lumières optimisé finalisé - Plus besoin de charger navbar_scene.glb !');
 
     // Retourner uniquement les lumières créées
     return {
@@ -1008,6 +1044,248 @@ export class LightService {
       spotRouge,
       sun
     };
+  }
+
+  /**
+   * Désactive complètement toutes les lumières (visible = false et intensity = 0)
+   * Utile pour tester le rendu sans aucune lumière
+   */
+  disableAllLights(): void {
+    this.simpleLights.forEach(light => {
+      // Sauvegarder l'intensité originale avant de la désactiver
+      if (light.intensity > 0) {
+        (light as any).originalIntensity = light.intensity;
+      }
+      
+      // Mettre à jour le SimpleLight
+      light.enabled = false;
+      light.intensity = 0;
+      
+      // Mettre à jour la lumière Three.js dans toutes les scènes
+      const relevantScenes = this.sceneRefs.filter(ref => ref.type === light.scene);
+      
+      relevantScenes.forEach(({ scene }) => {
+        const threeLight = scene.getObjectByName(light.name) as THREE.Light;
+        if (threeLight) {
+          threeLight.visible = false;
+          if ('intensity' in threeLight) {
+            (threeLight as LightWithIntensity).intensity = 0;
+          }
+        }
+      });
+    });
+    
+    // Notifier les abonnés
+    this.simpleLightsSubject.next([...this.simpleLights]);
+  }
+
+  /**
+   * Réactive toutes les lumières avec leurs intensités originales
+   */
+  enableAllLights(): void {
+    this.simpleLights.forEach(light => {
+      // Restaurer l'intensité originale
+      const originalIntensity = (light as any).originalIntensity || 1.0;
+      
+      // Mettre à jour le SimpleLight
+      light.enabled = true;
+      light.intensity = originalIntensity;
+      
+      // Mettre à jour la lumière Three.js dans toutes les scènes
+      const relevantScenes = this.sceneRefs.filter(ref => ref.type === light.scene);
+      
+      relevantScenes.forEach(({ scene }) => {
+        const threeLight = scene.getObjectByName(light.name) as THREE.Light;
+        if (threeLight) {
+          threeLight.visible = true;
+          if ('intensity' in threeLight) {
+            (threeLight as LightWithIntensity).intensity = originalIntensity;
+          }
+        }
+      });
+    });
+    
+    // Notifier les abonnés
+    this.simpleLightsSubject.next([...this.simpleLights]);
+  }
+
+  /**
+   * Méthode de débogage spécifique pour tester la désactivation d'une lumière
+   * Affiche des informations détaillées sur l'état de la lumière avant et après la désactivation
+   */
+  debugLightDisabling(lightName: string): void {
+    console.log(`🔍 DÉBOGAGE DÉSACTIVATION DE LA LUMIÈRE: ${lightName}`);
+    
+    // Étape 1: Vérifier si la lumière existe dans notre liste SimpleLight
+    const lightObj = this.simpleLights.find(l => l.name === lightName);
+    if (!lightObj) {
+      console.error(`❌ Lumière "${lightName}" non trouvée dans la liste SimpleLight`);
+      console.log('📋 Lumières disponibles:', this.simpleLights.map(l => l.name));
+      return;
+    }
+    
+    console.log(`✅ Lumière trouvée dans SimpleLight:`, {
+      name: lightObj.name,
+      intensity: lightObj.intensity,
+      enabled: lightObj.enabled,
+      scene: lightObj.scene
+    });
+    
+    // Étape 2: Vérifier dans toutes les scènes Three.js
+    const relevantScenes = this.sceneRefs.filter(ref => ref.type === lightObj.scene);
+    console.log(`🎬 Nombre de scènes à vérifier: ${relevantScenes.length}`);
+    
+    relevantScenes.forEach(({ scene, type }, index) => {
+      console.log(`\n🎭 Scène ${index + 1} (${type}):`);
+      
+      // Chercher la lumière par nom
+      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
+      
+      if (!threeLight) {
+        console.error(`❌ Lumière "${lightName}" non trouvée dans la scène Three.js`);
+        
+        // Lister toutes les lumières de cette scène pour diagnostic
+        console.log('💡 Lumières disponibles dans cette scène:');
+        scene.traverse(obj => {
+          if (obj instanceof THREE.Light) {
+            console.log(`   - ${obj.name || 'Sans nom'} (${this.getLightType(obj)}) - visible: ${obj.visible}, intensity: ${this.getLightIntensity(obj)}`);
+          }
+        });
+      } else {
+        console.log(`✅ Lumière trouvée dans Three.js:`, {
+          name: threeLight.name,
+          type: this.getLightType(threeLight),
+          visible: threeLight.visible,
+          intensity: 'intensity' in threeLight ? (threeLight as any).intensity : 'N/A',
+          position: 'position' in threeLight ? (threeLight as any).position : 'N/A'
+        });
+        
+        // Test de désactivation forcée
+        console.log('🔧 Test de désactivation forcée...');
+        threeLight.visible = false;
+        if ('intensity' in threeLight) {
+          (threeLight as LightWithIntensity).intensity = 0;
+        }
+        
+        console.log(`✅ Après désactivation forcée:`, {
+          visible: threeLight.visible,
+          intensity: 'intensity' in threeLight ? (threeLight as any).intensity : 'N/A'
+        });
+      }
+    });
+  }
+
+  /**
+   * Force la désactivation complète d'une lumière spécifique avec méthode aggressive
+   * Utile pour les lumières récalcitrantes qui ne s'éteignent pas normalement
+   */
+  forceDisableLight(lightName: string): void {
+    console.log(`🔨 DÉSACTIVATION FORCÉE: ${lightName}`);
+    
+    // Mettre à jour dans notre liste SimpleLight
+    const lightObj = this.simpleLights.find(l => l.name === lightName);
+    if (lightObj) {
+      // Sauvegarder l'intensité originale
+      if (lightObj.intensity > 0) {
+        (lightObj as any).originalIntensity = lightObj.intensity;
+      }
+      lightObj.enabled = false;
+      lightObj.intensity = 0;
+    }
+    
+    // Parcourir TOUTES les scènes enregistrées (pas seulement celles filtrées par type)
+    this.sceneRefs.forEach(({ scene, type }) => {
+      console.log(`🎬 Vérification scène ${type}...`);
+      
+      // Méthode 1: Recherche par nom
+      const threeLight = scene.getObjectByName(lightName) as THREE.Light;
+      if (threeLight) {
+        console.log(`✅ Lumière trouvée par nom dans ${type}`);
+        threeLight.visible = false;
+        if ('intensity' in threeLight) {
+          (threeLight as LightWithIntensity).intensity = 0;
+        }
+      }
+      
+      // Méthode 2: Recherche exhaustive par traverse (au cas où le nom ne correspondrait pas)
+      scene.traverse(obj => {
+        if (obj instanceof THREE.Light) {
+          // Vérification par nom exact
+          if (obj.name === lightName) {
+            console.log(`✅ Lumière trouvée par traverse dans ${type}`);
+            obj.visible = false;
+            if ('intensity' in obj) {
+              (obj as LightWithIntensity).intensity = 0;
+            }
+          }
+          
+          // Vérification par nom approximatif (au cas où il y aurait des espaces ou caractères différents)
+          if (obj.name && obj.name.toLowerCase().includes(lightName.toLowerCase())) {
+            console.log(`⚠️ Lumière similaire trouvée: "${obj.name}" pour recherche "${lightName}"`);
+            obj.visible = false;
+            if ('intensity' in obj) {
+              (obj as LightWithIntensity).intensity = 0;
+            }
+          }
+        }
+      });
+    });
+    
+    // Notifier les abonnés
+    this.simpleLightsSubject.next([...this.simpleLights]);
+    console.log(`✅ Désactivation forcée terminée pour: ${lightName}`);
+  }
+
+  /**
+   * Synchronise l'état enabled d'une lumière avec son intensité actuelle
+   * Utile pour corriger les désynchronisations entre l'icône et l'état réel
+   */
+  syncLightEnabledState(lightName: string): void {
+    const lightObj = this.simpleLights.find(l => l.name === lightName);
+    if (!lightObj) return;
+    
+    // Si l'intensité est > 0 mais enabled est false, corriger
+    if (lightObj.intensity > 0 && !lightObj.enabled) {
+      console.log(`🔄 Synchronisation: Réactivation de l'icône pour "${lightName}" (intensité: ${lightObj.intensity})`);
+      lightObj.enabled = true;
+    }
+    // Si l'intensité est 0 mais enabled est true, corriger
+    else if (lightObj.intensity === 0 && lightObj.enabled) {
+      console.log(`🔄 Synchronisation: Désactivation de l'icône pour "${lightName}"`);
+      lightObj.enabled = false;
+    }
+    
+    // Notifier les abonnés pour mettre à jour l'UI
+    this.simpleLightsSubject.next([...this.simpleLights]);
+  }
+
+  /**
+   * Synchronise l'état de toutes les lumières
+   * Corrige les désynchronisations entre intensité et état enabled
+   */
+  syncAllLightsEnabledState(): void {
+    let hasChanges = false;
+    
+    this.simpleLights.forEach(light => {
+      const oldEnabled = light.enabled;
+      
+      // Synchroniser l'état enabled avec l'intensité
+      if (light.intensity > 0 && !light.enabled) {
+        light.enabled = true;
+        hasChanges = true;
+        console.log(`🔄 Auto-sync: Réactivation de "${light.name}"`);
+      } else if (light.intensity === 0 && light.enabled) {
+        light.enabled = false;
+        hasChanges = true;
+        console.log(`🔄 Auto-sync: Désactivation de "${light.name}"`);
+      }
+    });
+    
+    // Notifier seulement s'il y a eu des changements
+    if (hasChanges) {
+      this.simpleLightsSubject.next([...this.simpleLights]);
+      console.log('✅ Synchronisation de toutes les lumières terminée');
+    }
   }
   
 }
