@@ -695,8 +695,8 @@ export class NavbarThreeService implements OnDestroy {
     if (!this.navbarScene || !this.directionalLight) return;
     
     // Ajuster la position et l'intensité de la lumière directionnelle principale
-    this.directionalLight.position.set(-8, 12, 8);
-    this.directionalLight.intensity = 0.9;
+    //this.directionalLight.position.set(-8, 12, 8);
+    //this.directionalLight.intensity = 0.9;
     
     // Rechercher et optimiser le torus
     this.navbarScene.traverse((obj: THREE.Object3D) => {
