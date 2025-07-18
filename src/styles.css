@@ -1,3 +1,5 @@
+@import url('./assets/css/animations.css');
+
 /* Variables CSS globales */
 :root {
   --bg-transparent-light: rgba(255, 255, 255, 0.1);
@@ -83,6 +85,3 @@
     padding: 20px;
   }
 }
-
-/* Styles globaux pour les animations */
-@import url('./assets/css/animations.css');
