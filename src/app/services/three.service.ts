@@ -14,6 +14,7 @@ import { LightService, SimpleLight } from './threejs/light.service';
 })
 export class ThreeService {
   private activeTab: 'navbar' | 'background' = 'navbar';
+  private navbarRetracted = false;
 
   constructor(
     private navbarService: NavbarThreeService,
@@ -93,6 +94,21 @@ export class ThreeService {
     this.backgroundService.dispose();
   }
 
+  /**
+   * Detects navbar retraction and initializes the background scene
+   */
+  handleNavbarRetract(): void {
+    if (!this.navbarRetracted) {
+      this.navbarRetracted = true;
+      const canvas = document.querySelector('#backgroundCanvas') as HTMLCanvasElement;
+      if (canvas) {
+        this.initBackground(canvas);
+      } else {
+        console.error('Background canvas not found during navbar retraction');
+      }
+    }
+  }
+
   // MÉTHODES DE GESTION DES LUMIÈRES (façade vers LightService)
   /**
    * Obtient toutes les lumières (observable)
@@ -151,48 +167,6 @@ export class ThreeService {
   }
 
   /**
-   * Log détaillé de toutes les lumières avec leurs propriétés complètes
-   * Utile pour analyser les lumières importées et leurs valeurs problématiques
-   */
-  logAllLightsDetailed(): void {
-    this.lightService.logAllLightsDetailed();
-  }
-
-  // Méthodes de compatibilité pour l'ancienne API
-  
-  setAmbientLightIntensity(intensity: number): void {
-    this.setLightIntensity('Lumière ambiante', intensity);
-  }
-
-  setDirectionalLightIntensity(intensity: number): void {
-    this.setLightIntensity('Lumière directionnelle', intensity);
-  }
-
-  setPointLightIntensity(intensity: number): void {
-    this.setLightIntensity('Lumière ponctuelle', intensity);
-  }
-  
-  setBackgroundLightIntensity(intensity: number): void {
-    this.setLightIntensity('Lumière de fond', intensity);
-  }
-
-  setAmbientLightColor(color: string): void {
-    this.setLightColor('Lumière ambiante', color);
-  }
-
-  setDirectionalLightColor(color: string): void {
-    this.setLightColor('Lumière directionnelle', color);
-  }
-
-  setPointLightColor(color: string): void {
-    this.setLightColor('Lumière ponctuelle', color);
-  }
-  
-  setBackgroundLightColor(color: string): void {
-    this.setLightColor('Lumière de fond', color);
-  }
-
-  /**
    * Crée un ensemble complet de lumières optimisées pour la navbar
    * Remplace les lumières importées par des lumières générées en code avec intensités normalisées
    */
@@ -212,26 +186,5 @@ export class ThreeService {
    */
   enableAllLights(): void {
     this.lightService.enableAllLights();
-  }
-
-  /**
-   * Méthode de débogage pour diagnostiquer les problèmes de désactivation des lumières
-   */
-  debugLightDisabling(lightName: string): void {
-    this.lightService.debugLightDisabling(lightName);
-  }
-
-  /**
-   * Force la désactivation complète d'une lumière récalcitrante
-   */
-  forceDisableLight(lightName: string): void {
-    this.lightService.forceDisableLight(lightName);
-  }
-
-  /**
-   * Synchronise l'état enabled de toutes les lumières
-   */
-  syncAllLightsEnabledState(): void {
-    this.lightService.syncAllLightsEnabledState();
   }
 }

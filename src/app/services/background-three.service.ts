@@ -165,6 +165,7 @@ export class BackgroundThreeService extends ThreeCoreService {
   private handleMouseMove(event: MouseEvent): void {
     this.mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+    this.needsUpdate = true;
   }
 
   /**
@@ -846,6 +847,7 @@ private moveCamera() {
         this.lastHeight = height;
       }
       
+      this.needsUpdate = true;
       this.resizeTimeout = null;
     }, 250); // Attendre 250ms après le dernier événement de redimensionnement
   }
