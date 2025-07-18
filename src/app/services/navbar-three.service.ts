@@ -66,7 +66,8 @@ export class NavbarThreeService implements OnDestroy {
   }
   /**
    * Initialise la scène Three.js pour la navbar
-   */  initNavbar(canvas: HTMLCanvasElement) {
+   */  
+  initNavbar(canvas: HTMLCanvasElement, initialLightValues?: { [lightName: string]: number }) {
     if (!canvas) {
       console.error('Canvas non disponible pour initNavbar');
       return;
@@ -118,7 +119,7 @@ export class NavbarThreeService implements OnDestroy {
     this.setupResizeListener();
     
     // Lumières de base
-    this.setupLights();
+    this.setupLights(initialLightValues);
     
     // Charger les modèles
     this.loadNavbarModels();
@@ -129,10 +130,10 @@ export class NavbarThreeService implements OnDestroy {
   /**
    * Configure les lumières pour la navbar
    */
-  private setupLights() {
+  private setupLights(initialLightValues?: { [lightName: string]: number }) {
     // Utiliser notre nouveau système de lumières optimisées créées directement en code
     // Au lieu d'importer les lumières depuis une scène, on les crée avec leurs propriétés exactes
-    const lights = this.lightService.createOptimizedNavbarLights(this.navbarScene);
+    const lights = this.lightService.createOptimizedNavbarLights(this.navbarScene, initialLightValues);
     
     // Stocker les références aux lumières principales
     this.ambientLight = lights.ambient;

@@ -861,11 +861,14 @@ export class LightService {
 
   /**
    * Crée un ensemble complet de lumières optimisées pour la navbar
-   * Basé sur l'analyse des lumières importées mais avec intensités normalisées à 1.0
    * @param scene La scène où ajouter les lumières
+   * @param initialValues Valeurs d'initialisation des intensités (optionnel)
    * @returns Les objets de lumière créés
    */
-  createOptimizedNavbarLights(scene: THREE.Scene): {
+  createOptimizedNavbarLights(
+    scene: THREE.Scene, 
+    initialValues?: { [lightName: string]: number }
+  ): {
     ambient: THREE.AmbientLight,
     directional: THREE.DirectionalLight,
     point: THREE.PointLight,
@@ -875,6 +878,23 @@ export class LightService {
     spotRouge: THREE.SpotLight,
     sun: THREE.DirectionalLight
   } {
+    // VALEURS D'INITIALISATION UNIFIÉES - Source unique de vérité
+    const defaultValues = {
+      'Lumière ambiante': 0.0,
+      'Lumière directionnelle': 0.15,
+      'Lumière ponctuelle': 0.0,
+      'SpotBD': 0.0,
+      'SpotHD': 0.0,
+      'Spotprincipal': 0.0,
+      'Spotrouge': 0.0,
+      'Sun': 0.0
+    };
+    
+    // Utiliser les valeurs passées en paramètre ou les valeurs par défaut
+    const targetValues = initialValues || defaultValues;
+    
+    console.log('🔥 CRÉATION DES LUMIÈRES AVEC ANIMATION VERS:', targetValues);
+
     // ÉTAPE 1: Supprimer toutes les lumières existantes importées depuis les modèles GLTF
     const lightsToRemove: THREE.Light[] = [];
     scene.traverse(obj => {
@@ -887,73 +907,86 @@ export class LightService {
       scene.remove(light);
     });
 
-    // ÉTAPE 2: Créer les nouvelles lumières optimisées avec intensités normalisées
+    // ÉTAPE 2: Créer les nouvelles lumières optimisées à intensité 0
 
-    // Création des lumières optimisées
-    const ambient = new THREE.AmbientLight('#ffffff', 1.0);
+    // Création des lumières optimisées avec intensité 0
+    const ambient = new THREE.AmbientLight('#ffffff', 0);
     ambient.name = 'Lumière ambiante';
     scene.add(ambient);
+    console.log('✅ Ambiante créée avec intensité:', ambient.intensity);
 
-    const directional = new THREE.DirectionalLight('#ffffff', 1.0);
+    const directional = new THREE.DirectionalLight('#ffffff', 0);
     directional.position.set(-5.000, 15.000, 10.000);
     directional.target.position.set(0.000, 0.000, 0.000);
     directional.castShadow = true;
     directional.name = 'Lumière directionnelle';
     this.configureShadowsForLight(directional);
     scene.add(directional);
+    console.log('✅ Directionnelle créée avec intensité:', directional.intensity);
 
-    const point = new THREE.PointLight('#ffffff', 1.0, 0, 2);
+    const point = new THREE.PointLight('#ffffff', 0, 0, 2);
     point.position.set(0.000, 0.000, 2.000);
     point.castShadow = true;
     point.name = 'Lumière ponctuelle';
     this.configureShadowsForLight(point);
     scene.add(point);
+    console.log('✅ Ponctuelle créée avec intensité:', point.intensity);
 
-    const spotBD = new THREE.SpotLight('#fff8f2', 1.0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
+    const spotBD = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
     spotBD.position.set(-79.931, 12.193, 5.648);
     spotBD.target.position.set(0.000, 0.000, -1.000);
     spotBD.castShadow = true;
     spotBD.name = 'SpotBD';
     this.configureShadowsForLight(spotBD);
     scene.add(spotBD);
+    console.log('✅ SpotBD créée avec intensité:', spotBD.intensity);
 
-    const spotHD = new THREE.SpotLight('#fff8f2', 1.0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
+    const spotHD = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
     spotHD.position.set(-61.144, 12.193, 46.533);
     spotHD.target.position.set(0.000, 0.000, -1.000);
     spotHD.castShadow = true;
     spotHD.name = 'SpotHD';
     this.configureShadowsForLight(spotHD);
     scene.add(spotHD);
+    console.log('✅ SpotHD créée avec intensité:', spotHD.intensity);
 
-    const spotPrincipal = new THREE.SpotLight('#fff8f2', 1.0, 99.98999786376953, 1.571, 1, 2);
+    const spotPrincipal = new THREE.SpotLight('#fff8f2', 0, 99.98999786376953, 1.571, 1, 2);
     spotPrincipal.position.set(1.642, 12.590, -8.854);
     spotPrincipal.target.position.set(0.000, 0.000, -1.000);
     spotPrincipal.castShadow = true;
     spotPrincipal.name = 'Spotprincipal';
     this.configureShadowsForLight(spotPrincipal);
     scene.add(spotPrincipal);
+    console.log('✅ SpotPrincipal créée avec intensité:', spotPrincipal.intensity);
 
-    const spotRouge = new THREE.SpotLight('#ff0009', 1.0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
+    const spotRouge = new THREE.SpotLight('#ff0009', 0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
     spotRouge.position.set(20.210, 12.193, 5.512);
     spotRouge.target.position.set(0.000, 0.000, -1.000);
     spotRouge.castShadow = true;
     spotRouge.name = 'Spotrouge';
     this.configureShadowsForLight(spotRouge);
     scene.add(spotRouge);
+    console.log('✅ SpotRouge créée avec intensité:', spotRouge.intensity);
 
-    const sun = new THREE.DirectionalLight('#ffffff', 1.0);
+    const sun = new THREE.DirectionalLight('#ffffff', 0);
     sun.position.set(0.000, 20.903, 0.000);
     sun.target.position.set(0.000, 0.000, -1.000);
     sun.castShadow = true;
     sun.name = 'Sun';
     this.configureShadowsForLight(sun);
     scene.add(sun);
+    console.log('✅ Sun créée avec intensité:', sun.intensity);
 
     // ÉTAPE 3: Enregistrer la scène et actualiser la liste
     this.registerScene(scene, 'navbar');
 
     // Actualiser la liste des lumières
     this.refreshLights([{ scene, type: 'navbar' }]);
+
+    // ÉTAPE 4: Lancer l'animation des intensités
+    setTimeout(() => {
+      this.animateLightsIntensity(targetValues);
+    }, 100); // Petit délai pour s'assurer que tout est initialisé
 
     // Retourner uniquement les lumières créées
     return {
@@ -1064,6 +1097,58 @@ export class LightService {
     if (hasChanges) {
       this.simpleLightsSubject.next([...this.simpleLights]);
     }
+  }
+
+  /**
+   * Anime l'intensité des lumières de 0 à leur valeur cible sur une durée donnée
+   * @param targetValues Valeurs d'intensité cibles pour chaque lumière
+   * @param duration Durée de l'animation en secondes (défaut: 2 secondes)
+   */
+  animateLightsIntensity(targetValues: { [lightName: string]: number }, duration: number = 2): void {
+    // Démarrer toutes les lumières à 0
+    Object.keys(targetValues).forEach(lightName => {
+      this.setLightIntensity(lightName, 0);
+    });
+
+    // Calculer les valeurs d'incrémentation par frame
+    const fps = 60;  // Frames par seconde cible
+    const totalFrames = Math.floor(fps * duration);
+    const increments: { [lightName: string]: number } = {};
+
+    Object.keys(targetValues).forEach(lightName => {
+      increments[lightName] = targetValues[lightName] / totalFrames;
+    });
+
+    // Animation frame par frame
+    let frame = 0;
+    const animate = () => {
+      // Incrémenter toutes les lumières
+      Object.keys(targetValues).forEach(lightName => {
+        const currentLight = this.simpleLights.find(l => l.name === lightName);
+        if (!currentLight) return;
+
+        // Calculer la nouvelle intensité
+        const newIntensity = Math.min(
+          currentLight.intensity + increments[lightName],
+          targetValues[lightName]
+        );
+        
+        // Mettre à jour l'intensité
+        this.setLightIntensity(lightName, newIntensity);
+      });
+
+      // Continuer l'animation si nécessaire
+      frame++;
+      if (frame < totalFrames) {
+        requestAnimationFrame(animate);
+      } else {
+        console.log('✅ Animation des lumières terminée');
+      }
+    };
+
+    // Démarrer l'animation
+    console.log('🎬 Démarrage de l\'animation des lumières');
+    requestAnimationFrame(animate);
   }
   
 }

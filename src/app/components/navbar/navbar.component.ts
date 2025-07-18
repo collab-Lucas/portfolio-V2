@@ -1267,19 +1267,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
   currentColor$: Observable<string>;
   lights: SimpleLight[] = []; // Utiliser SimpleLight au lieu de any[]
   private subscriptions: Subscription[] = [];
-  
-  // Les anciennes propriétés sont conservées pour la rétrocompatibilité
-  // mais ne sont plus directement utilisées
-  ambientLightIntensity = 0.1; // Initialisation à 0.1 comme demandé
-  directionalLightIntensity = 0.15; // Initialisation à 0.15 comme demandé
-  pointLightIntensity = 0.35; // Valeur conservée
-  backgroundLightIntensity = 0.5;
 
-  // Couleurs pastel harmonieuses pour la navbar
-  ambientLightColor = '#aee7fa';         // Bleu pastel
-  directionalLightColor = '#f7c6e0';     // Rose pastel
-  pointLightColor = '#fff6b7';           // Jaune pastel
-  backgroundLightColor = '#c6f7e2';      // Vert pastel
+  // Les couleurs sont maintenant gérées directement dans le service
 
   colorOptions: any[];  cvAvailable = false;
   isShrunk$: Observable<boolean>;
@@ -1288,18 +1277,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
   private currentShrinkState = true; // Cache pour l'état actuel
 
   showLightSettings: boolean = false;
-  activeTab: 'navbar' = 'navbar';// Définition des valeurs d'initialisation des lumières spécifiques
-  // Ces valeurs correspondent aux intensités optimisées pour un éclairage équilibré
-  private initialLightValues = {
-    'Lumière ambiante': 0.0,          // Intensité: 0.1
-    'Lumière directionnelle': 0.1,   // Intensité: 0.15  
-    'Lumière ponctuelle': 0.0,       // Intensité conservée: 0.35
-    'SpotBD': 0.0,                   // Intensité: 0.15
-    'SpotHD': 0.0,                    // Intensité: 0.4
-    'Spotprincipal': 0.0,            // Intensité: 0.35
-    'Spotrouge': 0.0,                 // Intensité: 0.3
-    'Sun': 0.0                       // Intensité: 0.25
-  };
+  activeTab: 'navbar' = 'navbar';
+
+  // Les valeurs d'initialisation sont maintenant centralisées dans le LightService
 
   constructor(
     private threeService: ThreeService,
@@ -1350,27 +1330,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
   ngAfterViewInit() {
     setTimeout(() => {
-      // S'assurer que le canvas est prêt
-      if (this.navbarCanvas && this.navbarCanvas.nativeElement) {
-        this.threeService.initNavbar(this.navbarCanvas.nativeElement);
-        
-        // Appeler onResize une fois au démarrage pour gérer la largeur initiale
-        this.threeService.onResize();
-        
-        // Charger la liste initiale des lumières
-        this.updateLightsList();
-                
-        // LOG DÉTAILLÉ DE TOUTES LES LUMIÈRES (pour analyser les lumières importées)
-        setTimeout(() => {
-          console.log('🔍 ANALYSE DES LUMIÈRES IMPORTÉES:');
-          this.threeService.logAllLightsDetailed();
-        }, 1000); // Délai pour s'assurer que tout est chargé
-        
-        
-        // Initialiser les lumières avec les valeurs par défaut
-        this.initializeLights();
-          
-        // S'abonner aux changements de lumières
+    // S'assurer que le canvas est prêt
+    if (this.navbarCanvas && this.navbarCanvas.nativeElement) {
+      // Passer null pour utiliser les valeurs par défaut du service
+      this.threeService.initNavbar(this.navbarCanvas.nativeElement);
+      
+      // Appeler onResize une fois au démarrage pour gérer la largeur initiale
+      this.threeService.onResize();
+      
+      // Charger la liste initiale des lumières
+      this.updateLightsList();        // S'abonner aux changements de lumières
         this.subscriptions.push(
           this.threeService.getLights().subscribe((lights: SimpleLight[]) => {
             this.lights = lights;
@@ -1382,41 +1351,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }, 0);
   }
   
-  /**
-   * Initialise les lumières avec les valeurs prédéfinies
-   */
-  private initializeLights(): void {
-    // Attendre un peu pour s'assurer que toutes les lumières sont chargées
-    setTimeout(() => {
-      // Pour chaque lumière dans notre liste d'initialisation
-      Object.entries(this.initialLightValues).forEach(([lightName, intensity]) => {
-        // Trouver la lumière correspondante
-        const light = this.lights.find(l => l.name === lightName);
-        if (light) {
-          // Définir l'intensité et s'assurer que la lumière est activée
-          this.threeService.setLightIntensity(lightName, intensity);
-          this.threeService.setLightVisibility(lightName, true);
-          
-          // Mettre à jour la valeur locale si c'est une des lumières principales
-          switch (lightName) {
-            case 'Lumière ambiante':
-              this.ambientLightIntensity = intensity;
-              break;
-            case 'Lumière directionnelle':
-              this.directionalLightIntensity = intensity;
-              break;
-            case 'Lumière ponctuelle':
-              this.pointLightIntensity = intensity;
-              break;
-            case 'Lumière de fond':
-              this.backgroundLightIntensity = intensity;
-              break;
-          }
-        }
-      });
-      
-    }, 500); // Délai pour s'assurer que toutes les lumières sont chargées
-  }
+  // Supprimé : initializeLights() - L'initialisation se fait maintenant dans le service
 
   ngOnDestroy() {
     // Nettoyage des ressources Three.js
@@ -1483,79 +1418,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }
   }
 
-  onAmbientLightChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.ambientLightIntensity = parseFloat(input.value);
-    this.threeService.setAmbientLightIntensity(this.ambientLightIntensity);
-  }
-
-  onDirectionalLightChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.directionalLightIntensity = parseFloat(input.value);
-    this.threeService.setDirectionalLightIntensity(this.directionalLightIntensity);
-  }
-
-  onPointLightChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.pointLightIntensity = parseFloat(input.value);
-    this.threeService.setPointLightIntensity(this.pointLightIntensity);
-  }
-
-  onBackgroundLightChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.backgroundLightIntensity = parseFloat(input.value);
-    this.threeService.setBackgroundLightIntensity(this.backgroundLightIntensity);
-  }
-
-  // Méthodes pour les inputs numériques
-  onAmbientLightIntensityInputChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.ambientLightIntensity = parseFloat(input.value);
-    this.threeService.setAmbientLightIntensity(this.ambientLightIntensity);
-  }
-
-  onDirectionalLightIntensityInputChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.directionalLightIntensity = parseFloat(input.value);
-    this.threeService.setDirectionalLightIntensity(this.directionalLightIntensity);
-  }
-
-  onPointLightIntensityInputChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.pointLightIntensity = parseFloat(input.value);
-    this.threeService.setPointLightIntensity(this.pointLightIntensity);
-  }
-
-  onBackgroundLightIntensityInputChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.backgroundLightIntensity = parseFloat(input.value);
-    this.threeService.setBackgroundLightIntensity(this.backgroundLightIntensity);
-  }
-
-  // Méthodes pour les changements de couleur
-  onAmbientLightColorChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.ambientLightColor = input.value;
-    this.threeService.setAmbientLightColor(this.ambientLightColor);
-  }
-
-  onDirectionalLightColorChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.directionalLightColor = input.value;
-    this.threeService.setDirectionalLightColor(this.directionalLightColor);
-  }
-
-  onPointLightColorChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.pointLightColor = input.value;
-    this.threeService.setPointLightColor(this.pointLightColor);
-  }
-
-  onBackgroundLightColorChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.backgroundLightColor = input.value;
-    this.threeService.setBackgroundLightColor(this.backgroundLightColor);
-  }  toggleLightControls(event: Event) {
+  // Toutes les anciennes méthodes individuelles ont été remplacées par les méthodes unifiées
+  // onLightIntensityChange et onLightColorChange
+  
+  toggleLightControls(event: Event) {
     // Prevent event bubbling to avoid triggering navbar toggle
     event.stopPropagation();
     
@@ -1572,30 +1438,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   updateLightsList() {
     this.lights = this.threeService.getAllLights();
     
-    // Mettre à jour les propriétés pour la rétrocompatibilité
-    const ambientLight = this.lights.find(l => l.name === 'Lumière ambiante');
-    if (ambientLight) {
-      this.ambientLightIntensity = ambientLight.intensity;
-      this.ambientLightColor = ambientLight.color;
-    }
-    
-    const directionalLight = this.lights.find(l => l.name === 'Lumière directionnelle');
-    if (directionalLight) {
-      this.directionalLightIntensity = directionalLight.intensity;
-      this.directionalLightColor = directionalLight.color;
-    }
-    
-    const pointLight = this.lights.find(l => l.name === 'Lumière ponctuelle');
-    if (pointLight) {
-      this.pointLightIntensity = pointLight.intensity;
-      this.pointLightColor = pointLight.color;
-    }
-    
-    const backgroundLight = this.lights.find(l => l.name === 'Lumière de fond');
-    if (backgroundLight) {
-      this.backgroundLightIntensity = backgroundLight.intensity;
-      this.backgroundLightColor = backgroundLight.color;
-    }
+    // Plus besoin de mettre à jour les valeurs initiales car elles sont gérées par le service
   }
   
   /**
@@ -1627,21 +1470,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     // Utiliser la méthode du service pour modifier l'intensité
     this.threeService.setLightIntensity(lightName, intensity);
     
-    // Mise à jour des propriétés de rétrocompatibilité
-    switch (lightName) {
-      case 'Lumière ambiante':
-        this.ambientLightIntensity = intensity;
-        break;
-      case 'Lumière directionnelle':
-        this.directionalLightIntensity = intensity;
-        break;
-      case 'Lumière ponctuelle':
-        this.pointLightIntensity = intensity;
-        break;
-      case 'Lumière de fond':
-        this.backgroundLightIntensity = intensity;
-        break;
-    }
+    // Plus besoin de mettre à jour les valeurs locales car tout est géré par le service
   }
   
   /**
@@ -1655,22 +1484,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
     
     // Utiliser la méthode du service pour modifier la couleur
     this.threeService.setLightColor(lightName, color);
-    
-    // Mise à jour des propriétés de rétrocompatibilité
-    switch (lightName) {
-      case 'Lumière ambiante':
-        this.ambientLightColor = color;
-        break;
-      case 'Lumière directionnelle':
-        this.directionalLightColor = color;
-        break;
-      case 'Lumière ponctuelle':
-        this.pointLightColor = color;
-        break;
-      case 'Lumière de fond':
-        this.backgroundLightColor = color;
-        break;
-    }
   }
   
   /**

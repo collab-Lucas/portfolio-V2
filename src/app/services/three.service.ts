@@ -24,8 +24,8 @@ export class ThreeService {
   /**
    * Initialise la scène de la navbar
    */
-  initNavbar(canvas: HTMLCanvasElement) {
-    this.navbarService.initNavbar(canvas);
+  initNavbar(canvas: HTMLCanvasElement, initialLightValues?: { [lightName: string]: number }) {
+    this.navbarService.initNavbar(canvas, initialLightValues);
   }
 
   /**
