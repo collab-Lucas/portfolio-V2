@@ -125,31 +125,38 @@ export class ThreeService {
   }
 
   /**
+   * Méthode unifiée pour définir les propriétés des lumières
+   */
+  setLightProperty(lightName: string, property: 'intensity' | 'color' | 'visibility' | 'castShadow', value: any): void {
+    this.lightService.setLightProperty(lightName, property, value);
+  }
+
+  /**
    * Définit l'intensité d'une lumière
    */
   setLightIntensity(lightName: string, intensity: number): void {
-    this.lightService.setLightIntensity(lightName, intensity);
+    this.setLightProperty(lightName, 'intensity', intensity);
   }
 
   /**
    * Définit la couleur d'une lumière
    */
   setLightColor(lightName: string, color: string): void {
-    this.lightService.setLightColor(lightName, color);
+    this.setLightProperty(lightName, 'color', color);
   }
 
   /**
    * Définit la visibilité d'une lumière
    */
   setLightVisibility(lightName: string, visible: boolean): void {
-    this.lightService.setLightVisibility(lightName, visible);
+    this.setLightProperty(lightName, 'visibility', visible);
   }
 
   /**
    * Définit si une lumière projette des ombres
    */
   setLightCastShadow(lightName: string, castShadow: boolean): void {
-    this.lightService.setLightCastShadow(lightName, castShadow);
+    this.setLightProperty(lightName, 'castShadow', castShadow);
   }
 
   /**

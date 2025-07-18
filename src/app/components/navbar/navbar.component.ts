@@ -51,16 +51,16 @@ import { trigger, transition, style, animate } from '@angular/animations';
               <input type="range" 
                      class="form-range light-slider" 
                      [min]="0" 
-                     [max]="light.type === 'DirectionalLight' ? 1.5 : 1" 
-                     step="0.05" 
+                     [max]="getLightMaxValue(light.name)" 
+                     [step]="getLightStep(light.name)" 
                      [value]="light.intensity"
                      (input)="onLightIntensityChange(light.name, $event)">
               <input type="number" 
                      class="form-control form-control-sm intensity-input" 
                      [value]="light.intensity"
                      [min]="0" 
-                     [max]="light.type === 'DirectionalLight' ? 1.5 : 1"
-                     step="0.05"
+                     [max]="getLightMaxValue(light.name)"
+                     [step]="getLightStep(light.name)"
                      (input)="onLightIntensityChange(light.name, $event)">
             </div>
           </div>
@@ -1270,9 +1270,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
   
   // Les anciennes propriétés sont conservées pour la rétrocompatibilité
   // mais ne sont plus directement utilisées
-  ambientLightIntensity = 0.4; // Initialisation à 0.4 comme demandé
-  directionalLightIntensity = 0.05; // Initialisation à 0.05 comme demandé
-  pointLightIntensity = 0.3;
+  ambientLightIntensity = 0.1; // Initialisation à 0.1 comme demandé
+  directionalLightIntensity = 0.15; // Initialisation à 0.15 comme demandé
+  pointLightIntensity = 0.35; // Valeur conservée
   backgroundLightIntensity = 0.5;
 
   // Couleurs pastel harmonieuses pour la navbar
@@ -1289,17 +1289,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   showLightSettings: boolean = false;
   activeTab: 'navbar' = 'navbar';// Définition des valeurs d'initialisation des lumières spécifiques
-  // Ces valeurs correspondent aux intensités originales des lumières importées
-  // mais maintenant appliquées sur des lumières créées directement en code avec intensité de base 1.0
+  // Ces valeurs correspondent aux intensités optimisées pour un éclairage équilibré
   private initialLightValues = {
-    'Lumière ambiante': 0.4,          // Intensité originale: 0.4
-    'Lumière directionnelle': 0.05,   // Intensité originale: 0.05  
-    'Lumière ponctuelle': 0.35,       // Intensité originale: 0.35
-    'SpotBD': 0.5,                    // Intensité originale: 0.5
-    'SpotHD': 20.0,                   // Intensité originale: 20
-    'Spotprincipal': 100.0,           // Intensité originale: 100
-    'Spotrouge': 1000.0,              // Intensité originale: 1000
-    'Sun': 0.9                        // Intensité originale: 0.9
+    'Lumière ambiante': 0.0,          // Intensité: 0.1
+    'Lumière directionnelle': 0.1,   // Intensité: 0.15  
+    'Lumière ponctuelle': 0.0,       // Intensité conservée: 0.35
+    'SpotBD': 0.0,                   // Intensité: 0.15
+    'SpotHD': 0.0,                    // Intensité: 0.4
+    'Spotprincipal': 0.0,            // Intensité: 0.35
+    'Spotrouge': 0.0,                 // Intensité: 0.3
+    'Sun': 0.0                       // Intensité: 0.25
   };
 
   constructor(
@@ -1708,6 +1707,46 @@ export class NavbarComponent implements OnInit, OnDestroy {
         return 'assets/img/brands/logo site.png';    // Image générique pour autres lumières
       default:
         return 'assets/img/brands/logo site.png';    // Image par défaut
+    }
+  }
+
+  /**
+   * Retourne la valeur maximale pour une lumière selon son nom
+   */
+  getLightMaxValue(lightName: string): number {
+    switch (lightName) {
+      case 'Spotprincipal':
+      case 'Spotrouge':
+      case 'Lumière ponctuelle':
+        return 10000;
+      case 'SpotHD':
+      case 'SpotBD':
+        return 100000;
+      case 'Lumière directionnelle':
+        return 1.5;
+      default:
+        return 1; // Valeur par défaut pour les autres lumières
+    }
+  }
+
+  /**
+   * Retourne le pas d'incrémentation pour une lumière selon son nom
+   */
+  getLightStep(lightName: string): number {
+    switch (lightName) {
+      case 'Spotprincipal':
+      case 'Spotrouge':
+      case 'Lumière ponctuelle':
+        return 10; // Pas de 10 pour les lumières jusqu'à 10000
+      case 'SpotHD':
+      case 'SpotBD':
+        return 100; // Pas de 100 pour les lumières jusqu'à 100000
+      case 'Lumière directionnelle':
+      case 'Lumière ambiante':
+      case 'Sun':
+        return 0.05; // Pas fin pour les lumières avec des valeurs faibles
+      default:
+        return 0.1; // Valeur par défaut
     }
   }  @HostListener('document:click', ['$event'])
   handleClickOutside(event: Event) {
