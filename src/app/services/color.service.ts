@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 
 export interface ColorOption {
@@ -9,7 +9,7 @@ export interface ColorOption {
 @Injectable({
   providedIn: 'root'
 })
-export class ColorService {
+export class ColorService implements OnDestroy {
   private colorOptions: ColorOption[] = [
     { name: 'Bleu clair', hex: '#66ccff' },
     { name: 'Rouge', hex: '#ff6666' },
@@ -54,5 +54,9 @@ export class ColorService {
     
     // Return white for dark colors, black for light colors
     return luminance > 0.5 ? '#000000' : '#ffffff';
+  }
+
+  ngOnDestroy(): void {
+    this.showPalette.complete();
   }
 }

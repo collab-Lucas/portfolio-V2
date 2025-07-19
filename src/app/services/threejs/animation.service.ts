@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import * as THREE from 'three';
 import { AnimationMixer } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -13,7 +13,7 @@ export interface AnimationProperties {
 }
 
 @Injectable({ providedIn: 'root' })
-export class AnimationService {
+export class AnimationService implements OnDestroy {
   private mixers: THREE.AnimationMixer[] = [];
   private clock = new THREE.Clock();
   private animationFrameIds: number[] = [];
@@ -295,5 +295,9 @@ export class AnimationService {
       mixer.stopAllAction();
     });
     this.mixers = [];
+  }
+
+  ngOnDestroy(): void {
+    this.dispose();
   }
 }

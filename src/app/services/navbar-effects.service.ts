@@ -34,6 +34,6 @@ export class NavbarEffectsService implements OnDestroy {
   }
 
   ngOnDestroy() {
-    // Cleanup if needed in the future
+    this.navbarStateSubject.complete();
   }
 }
