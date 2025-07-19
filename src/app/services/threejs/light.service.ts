@@ -377,7 +377,7 @@ export class LightService {
     if (!light.shadow) return;
     
     // Configuration de base optimisée (résolution plus petite pour les performances)
-    light.shadow.mapSize.width = 512; // Réduit de 1024 à 512 pour de meilleures performances
+    light.shadow.mapSize.width = 512; // Réduits de 1024 à 512 pour de meilleures performances
     light.shadow.mapSize.height = 512;
     
     // Configuration spécifique aux types de lumières
@@ -392,7 +392,7 @@ export class LightService {
       (light.shadow.camera as THREE.OrthographicCamera).far = 50;
       light.shadow.bias = -0.0005;
       light.shadow.normalBias = 0.02;
-      light.shadow.radius = 1; // Réduit de 2 à 1
+      light.shadow.radius = 1; // Réduits de 2 à 1
     } else if (light instanceof THREE.SpotLight) {
       light.shadow.bias = -0.0003;
       (light.shadow.camera as THREE.PerspectiveCamera).near = 0.5;
@@ -433,15 +433,15 @@ export class LightService {
     
     switch (quality) {
       case 'low':
-        shadowMapSize = 256; // Réduit davantage pour de meilleures performances
+        shadowMapSize = 256; // Réduits davantage pour de meilleures performances
         type = THREE.BasicShadowMap; // Le plus rapide
         break;
       case 'medium':
-        shadowMapSize = 512; // Réduit de 1024 à 512
+        shadowMapSize = 512; // Réduits de 1024 à 512
         type = THREE.PCFShadowMap;
         break;
       case 'high':
-        shadowMapSize = 1024; // Réduit de 2048 à 1024
+        shadowMapSize = 1024; // Réduits de 2048 à 1024
         type = THREE.PCFSoftShadowMap;
         break;
     }

@@ -32,7 +32,7 @@ export abstract class ThreeCoreService {
   }
 
   /**
-   * Nettoie les ressources pour éviter les fuites mémoire
+   * Cleanup resources and event listeners
    */
   dispose(): void {
     if (this.animationId) {

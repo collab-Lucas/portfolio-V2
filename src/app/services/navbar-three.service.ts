@@ -821,6 +821,9 @@ export class NavbarThreeService implements OnDestroy {
     if (this.resizeSubscription) {
       this.resizeSubscription.unsubscribe();
     }
+    
+    // Remove event listeners
+    window.removeEventListener('resize', this.onResize.bind(this));
   }
   
   /**
@@ -848,4 +851,12 @@ export class NavbarThreeService implements OnDestroy {
     this.navbarCamera.updateProjectionMatrix();
   }
 
+  /**
+   * Simplify geometry for performance optimization
+   */
+  private optimizeGeometry(child: THREE.Object3D): void {
+    if (child instanceof THREE.Mesh && child.geometry instanceof THREE.SphereGeometry) {
+      child.geometry = new THREE.SphereGeometry(10, 16, 16); // Reduced complexity
+    }
+  }
 }
