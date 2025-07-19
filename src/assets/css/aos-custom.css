@@ -24,4 +24,24 @@
   opacity: 1;
 }
 
+/* Animation slide-left */
+[data-aos="slide-left"] {
+  transform: translateX(-50px);
+  opacity: 0;
+}
+[data-aos="slide-left"].aos-animate {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Animation slide-right */
+[data-aos="slide-right"] {
+  transform: translateX(50px);
+  opacity: 0;
+}
+[data-aos="slide-right"].aos-animate {
+  transform: translateX(0);
+  opacity: 1;
+}
+
 /* Additional animations as needed */

@@ -231,8 +231,8 @@
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.95%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
-/* Responsive */
-@media (max-width: 991.98px) {
+/* Responsive - Media Queries Optimisées */
+@media (max-width: 768px) {
   .large-navbar .navbar-collapse {
     transform: translateY(40vh);
   }
@@ -254,9 +254,7 @@
     max-width: 320px;
     right: 5%;
   }
-}
 
-@media (max-width: 575.98px) {
   .navbar-brand {
     font-size: 1.1rem;
   }
@@ -264,6 +262,14 @@
   .logo-settings {
     width: 20px;
     height: 20px;
+  }
+
+  .navbar-canvas {
+    height: 100%;
+  }
+  
+  .shrink-navbar .navbar-canvas {
+    transform: translateY(-92vh);
   }
 }
 
@@ -572,18 +578,7 @@
   font-size: 1.35rem;
 }
 
-/* Ensure the canvas looks good across all device sizes */
-@media (max-width: 767.98px) {
-  .navbar-canvas {
-    height: 100%;
-  }
-  
-  .shrink-navbar .navbar-canvas {
-    transform: translateY(-92vh);
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1199.98px) {
+@media (min-width: 769px) {
   .shrink-navbar .navbar-canvas {
     transform: translateY(-93vh);
   }
