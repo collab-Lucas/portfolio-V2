@@ -10,6 +10,13 @@ import { LightService } from './threejs/light.service';
 import { AnimationService } from './threejs/animation.service';
 import { ResizeService } from '../core/resize.service';
 
+// Déclarations TypeScript pour l'objet Window
+declare global {
+  interface Window {
+    registerScene?: (scene: THREE.Scene, type: string, camera: THREE.Camera) => void;
+  }
+}
+
 /**
  * Service spécialisé pour gérer les effets Three.js de la barre de navigation
  */
@@ -113,7 +120,7 @@ export class NavbarThreeService implements OnDestroy {
     this.lightService.registerScene(this.navbarScene, 'navbar', this.navbarRenderer);
       // Enregistrement global pour la compatibilité
     if (window.registerScene) {
-      window.registerScene(this.navbarScene, 'navbar', this.navbarRenderer);
+      window.registerScene(this.navbarScene, 'navbar', this.navbarCamera);
     }
     
     // Configurer l'écoute du redimensionnement
