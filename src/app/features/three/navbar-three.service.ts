@@ -10,13 +10,6 @@ import { LightService } from './light.service';
 import { AnimationService } from './animation.service';
 import { ResizeService } from '../../core/resize.service';
 
-// Déclarations TypeScript pour l'objet Window
-declare global {
-  interface Window {
-    registerScene?: (scene: THREE.Scene, type: string, camera: THREE.Camera) => void;
-  }
-}
-
 /**
  * Service spécialisé pour gérer les effets Three.js de la barre de navigation
  */

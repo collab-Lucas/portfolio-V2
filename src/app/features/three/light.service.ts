@@ -2,13 +2,6 @@ import * as THREE from 'three';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 
-// Déclarations TypeScript pour l'objet Window
-declare global {
-  interface Window {
-    lightServiceInstance?: any;
-  }
-}
-
 /**
  * Interface pour une représentation simplifiée des lumières
  * utilisée pour la gestion des lumières via l'UI
