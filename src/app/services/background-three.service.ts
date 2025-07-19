@@ -552,40 +552,47 @@ export class BackgroundThreeService extends ThreeCoreService {
   // Le flag needsUpdate est déjà défini en haut de la classe
   
   /**
-   * Boucle d'animation optimisée avec rendu conditionnel et animations fluides
+   * Boucle d'animation continue garantissant un rendu permanent
+   * L'animation ne s'arrête JAMAIS, indépendamment de l'activité utilisateur
    */
 private animate(): void {
   const render = () => {
-    this.animationTime += 0.01;
+    const delta = this.clock.getDelta();
+    this.animationTime += delta;
+    
     if (this.animationTime > 1000) {
       this.animationTime = this.animationTime % 1000;
     }
-    this.updateShaders();
-    this.animateObjects(0.01);
 
-    // Interpolation fluide de la caméra vers la cible
-    const lerpSpeed = 0.08;
-    const prevPos = this.camera.position.clone();
-    const prevRotY = this.camera.rotation.y;
-    this.camera.position.lerp(this.cameraTargetPosition, lerpSpeed);
-    this.camera.rotation.y += (this.cameraTargetRotationY - this.camera.rotation.y) * lerpSpeed;
+    try {
+      // Toujours mettre à jour les shaders et animer les objets
+      this.updateShaders();
+      this.animateObjects(delta);
 
-    // Rendu conditionnel : on ne rend que si la caméra a bougé ou needsUpdate
-    const cameraMoved = !this.camera.position.equals(prevPos) || this.camera.rotation.y !== prevRotY;
-    if (this.needsUpdate || cameraMoved) {
+      // Interpolation fluide de la caméra vers la cible
+      const lerpSpeed = 0.08;
+      this.camera.position.lerp(this.cameraTargetPosition, lerpSpeed);
+      this.camera.rotation.y += (this.cameraTargetRotationY - this.camera.rotation.y) * lerpSpeed;
+
+      // RENDU CONTINU : toujours effectuer le rendu pour garantir une animation fluide
       this.renderer.render(this.scene, this.camera);
-      this.needsUpdate = false;
+      
+    } catch (error) {
+      console.error('Erreur dans la boucle d\'animation:', error);
     }
+
+    // Demander immédiatement la prochaine frame pour garantir la continuité
     this.animationId = requestAnimationFrame(render);
   };
   render();
 }
 
   /**
-   * Met à jour les shaders de façon simple et directe
+   * Met à jour les shaders de façon continue
+   * Garantit une animation fluide des shaders même sans activité utilisateur
    */
   private updateShaders(): void {
-    // Mettre à jour les shaders avec uniforms time
+    // Toujours mettre à jour les shaders avec le temps actuel
     this.scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         // Pour les ShaderMaterial classiques
@@ -607,49 +614,56 @@ private animate(): void {
   }
 
   /**
-   * Anime les objets de façon simple et directe
+   * Anime les objets de façon continue et dynamique
+   * Les animations se poursuivent indépendamment de l'activité utilisateur
    */
   private animateObjects(delta: number): void {
-    // Animation des modèles si nécessaire
+    const frameMultiplier = delta * 60; // Normaliser pour 60fps
+    
+    // Animation continue des modèles
     if (this.models['prisme']) {
-      // Rotation continue indépendante du scroll
-      this.models['prisme'].rotation.y += 0.005;
+      // Rotation continue indépendante du scroll et de la souris
+      this.models['prisme'].rotation.y += 0.005 * frameMultiplier;
+    }
+    
+    // Animation du bureau avec effet de respiration subtil
+    if (this.models['scene_bureau']) {
+      const bureau = this.models['scene_bureau'];
+      const initialRotationY = THREE.MathUtils.degToRad(-35);
+      
+      // Rotation basée sur la souris (si disponible) + oscillation automatique
+      const mouseRotationX = this.mouseY * 0.01;
+      const mouseRotationY = this.mouseX * 0.01;
+      const breathingEffect = Math.sin(this.animationTime * 0.5) * 0.002; // Effet de respiration subtil
+      
+      bureau.rotation.x = mouseRotationX + breathingEffect;
+      bureau.rotation.y = initialRotationY + mouseRotationY + breathingEffect;
+      
+      // Animation spéciale lors du scroll dans certaines sections
+      const t = document.body.getBoundingClientRect().top;
+      if (t >= -850 && t <= -650) {
+        bureau.rotation.z = Math.sin(this.animationTime * 2) * 0.01;
+      } else {
+        bureau.rotation.z *= 0.95; // Retour progressif à zéro
+      }
     }
     
     // Animation des prismes clonés pour plus de dynamisme
+    let prismCount = 0;
     this.scene.children.forEach(child => {
       if (child instanceof THREE.Group && 
           child !== this.models['prisme'] && 
           child !== this.models['scene_fond'] &&
-          child !== this.models['scene_bureau']) {
-        child.rotation.x += 0.002;
-        child.rotation.y += 0.003;
+          child !== this.models['scene_bureau'] &&
+          prismCount < this.qualitySettings.prismCount) {
+        
+        // Rotation continue à des vitesses différentes pour chaque prisme
+        child.rotation.x += 0.002 * frameMultiplier;
+        child.rotation.y += 0.003 * frameMultiplier;
+        child.rotation.z += 0.001 * frameMultiplier;
+        prismCount++;
       }
     });
-    
-    // Animation du bureau basée sur la souris
-    if (this.models['scene_bureau']) {
-      const bureau = this.models['scene_bureau'];
-
-      // Rotation initiale sur Y (base)
-      const initialRotationY = THREE.MathUtils.degToRad(-35);
-
-      // Ajouter une rotation basée sur la souris
-      const mouseRotationX = this.mouseY * 0.01; // Rotation subtile sur X
-      const mouseRotationY = this.mouseX * 0.01; // Rotation subtile sur Y
-
-      // Appliquer les rotations en ajoutant à la rotation initiale
-      bureau.rotation.x = mouseRotationX; // Rotation sur X basée sur la souris
-      bureau.rotation.y = initialRotationY + mouseRotationY; // Rotation sur Y basée sur la souris
-
-      // Oscillation sur Z uniquement dans la zone de stagnation
-      const t = document.body.getBoundingClientRect().top;
-      if (t >= -850 && t <= -650) {
-        bureau.rotation.z = Math.sin(this.animationTime * 2) * 0.01; // Oscillation subtile avec temps normalisé
-      } else {
-        bureau.rotation.z *= 0.95; // Réduction progressive hors de la zone
-      }
-    }
   }
 
   // Points de caméra pré-calculés pour éviter les calculs répétitifs
