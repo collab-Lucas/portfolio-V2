@@ -5,10 +5,10 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-import { CommonThreeService } from './threejs/common-three.service';
+import { CommonThreeService } from '../shared/utils/common-three.service';
 import { LightService } from './threejs/light.service';
 import { AnimationService } from './threejs/animation.service';
-import { ResizeService } from './resize.service';
+import { ResizeService } from '../core/resize.service';
 
 /**
  * Service spécialisé pour gérer les effets Three.js de la barre de navigation

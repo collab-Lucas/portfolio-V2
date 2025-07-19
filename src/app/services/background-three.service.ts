@@ -17,7 +17,7 @@ const QUALITY_PRESETS: Record<string, QualitySettings> = {
 import { Injectable } from '@angular/core';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { ThreeCoreService } from './threejs/three-core.service';
+import { ThreeCoreService } from './three-core.service';
 
 // ...début de la classe...
 
@@ -33,12 +33,17 @@ export class BackgroundThreeService extends ThreeCoreService {
   private mouseX = 0;
   private mouseY = 0;
   private animationTime = 0;
+  private animationId: number | null = null;
   private clock = new THREE.Clock();
   private qualityLevel: 'low' | 'medium' | 'high' = 'medium';
   private qualitySettings: QualitySettings = QUALITY_PRESETS['medium'];
   private needsUpdate = true;
   private cameraTargetPosition = new THREE.Vector3(-3, 0, 300);
   private cameraTargetRotationY = THREE.MathUtils.degToRad(-3.69);
+  private initialized = false;
+  private resizeTimeout: any | null = null;
+  private lastWidth = 0;
+  private lastHeight = 0;
 
   constructor() {
     super();
@@ -97,9 +102,18 @@ export class BackgroundThreeService extends ThreeCoreService {
     }
   }
 
-  // initializeScene hérité et adapté via ThreeCoreService
-  protected override initializeScene(canvas: HTMLCanvasElement): void {
-    super.initializeScene(canvas, 75, 0.1, 1000);
+  // initializeScene personnalisée pour Background
+  private initializeScene(canvas: HTMLCanvasElement): void {
+    // Initialisation personnalisée pour le background
+    this.renderer = new THREE.WebGLRenderer({ 
+      canvas: canvas,
+      antialias: this.qualitySettings.enableAntialiasing,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    this.scene = new THREE.Scene();
+    
     this.scene.fog = new THREE.Fog(0xcccccc, 1, 500);
     this.camera.position.set(-3, 0, 300);
     this.camera.rotation.set(0, THREE.MathUtils.degToRad(-3.69), 0);
@@ -827,7 +841,7 @@ private moveCamera() {
   /**
    * Gère le redimensionnement avec debouncing et caching
    */
-  onResize(): void {
+  override onResize(): void {
     if (!this.renderer || !this.camera) return;
     
     // Annuler tout redimensionnement précédent en attente
@@ -901,5 +915,15 @@ private moveCamera() {
   /**
    * Méthode auxiliaire pour nettoyer un matériau et ses ressources associées
    */
+  private disposeMaterial(material: THREE.Material): void {
+    // Cast sécurisé pour accéder aux propriétés de texture
+    const mat = material as any;
+    if (mat.map && typeof mat.map.dispose === 'function') mat.map.dispose();
+    if (mat.normalMap && typeof mat.normalMap.dispose === 'function') mat.normalMap.dispose();
+    if (mat.roughnessMap && typeof mat.roughnessMap.dispose === 'function') mat.roughnessMap.dispose();
+    if (mat.metalnessMap && typeof mat.metalnessMap.dispose === 'function') mat.metalnessMap.dispose();
+    if (mat.envMap && typeof mat.envMap.dispose === 'function') mat.envMap.dispose();
+    material.dispose();
+  }
 
 }

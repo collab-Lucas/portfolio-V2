@@ -5,9 +5,9 @@ import * as THREE from 'three';
   providedIn: 'root'
 })
 export class ThreeCoreService {
-  private renderer: THREE.WebGLRenderer;
-  private camera: THREE.PerspectiveCamera;
-  private scene: THREE.Scene;
+  protected renderer: THREE.WebGLRenderer;
+  protected camera: THREE.PerspectiveCamera;
+  protected scene: THREE.Scene;
 
   constructor() {
     this.scene = new THREE.Scene();
