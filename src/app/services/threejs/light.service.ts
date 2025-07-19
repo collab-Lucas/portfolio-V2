@@ -1099,7 +1099,7 @@ export class LightService {
     this.configureShadowsForLight(spotHD);
     scene.add(spotHD);
     this.manageShadowCastingLights(spotHD, 'navbar');
-    console.log('✅ SpotHD créée avec intensité:', spotHD.intensity);
+    // ...removed console.log for optimization...
     
     const spotRouge = new THREE.SpotLight('#ff0009', 0, 99.98999786376953, 1.571, 0.7889447212219238, 2);
     spotRouge.position.set(20.210, 12.193, 5.512);
@@ -1109,7 +1109,7 @@ export class LightService {
     this.configureShadowsForLight(spotRouge);
     scene.add(spotRouge);
     this.manageShadowCastingLights(spotRouge, 'navbar');
-    console.log('✅ SpotRouge créée avec intensité:', spotRouge.intensity);
+    // ...removed console.log for optimization...
 
     const point = new THREE.PointLight('#ffffff', 0, 0, 2);
     point.position.set(0.000, 0.000, 2.000);
@@ -1118,7 +1118,7 @@ export class LightService {
     this.configureShadowsForLight(point);
     scene.add(point);
     this.manageShadowCastingLights(point, 'navbar');
-    console.log('✅ Ponctuelle créée avec intensité:', point.intensity);
+    // ...removed console.log for optimization...
 
     // ÉTAPE 3: Enregistrer la scène et actualiser la liste
     this.registerScene(scene, 'navbar');
@@ -1260,7 +1260,7 @@ export class LightService {
         }
       });
       
-      console.log(`🔄 Limitation des ombres appliquée pour la scène ${type}: ${sceneLights.length} lumières avec ombres activées sur ${lightsWithShadow.length} lumières totales`);
+      // ...removed console.log for optimization...
     });
     
     // Notifier les abonnés
@@ -1272,7 +1272,7 @@ export class LightService {
    */
   debugLightDisabling(lightName: string): void {
     const lightObj = this.simpleLights.find(l => l.name === lightName);
-    console.log(`[DEBUG] Light ${lightName}:`, lightObj);
+    // ...removed console.log for optimization...
   }
 
   forceDisableLight(lightName: string): void {
