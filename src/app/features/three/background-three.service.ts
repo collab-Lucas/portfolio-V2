@@ -7,6 +7,8 @@ import { debounceTime, throttleTime } from 'rxjs/operators';
 import { LightService } from './light.service';
 import { AnimationService } from './animation.service';
 import { CommonThreeService } from '../../shared/utils/common-three.service';
+import { GeometryOptimizationService } from '../../shared/utils/geometry-optimization.service';
+import { PerformanceMonitoringService } from '../../shared/utils/performance-monitoring.service';
 
 interface QualitySettings {
   prismCount: number;
@@ -18,9 +20,9 @@ interface QualitySettings {
 }
 
 const QUALITY_PRESETS: Record<string, QualitySettings> = {
-  low: { prismCount: 20, sphereSegments: 16, shadowMapSize: 512, pixelRatio: 0.5, enableShadows: false, enableAntialiasing: false },
-  medium: { prismCount: 50, sphereSegments: 32, shadowMapSize: 1024, pixelRatio: 1, enableShadows: true, enableAntialiasing: true },
-  high: { prismCount: 100, sphereSegments: 32, shadowMapSize: 2048, pixelRatio: 1.5, enableShadows: true, enableAntialiasing: true }
+  low: { prismCount: 15, sphereSegments: 8, shadowMapSize: 512, pixelRatio: 0.5, enableShadows: false, enableAntialiasing: false },
+  medium: { prismCount: 35, sphereSegments: 12, shadowMapSize: 1024, pixelRatio: 1, enableShadows: true, enableAntialiasing: true },
+  high: { prismCount: 60, sphereSegments: 16, shadowMapSize: 2048, pixelRatio: 1.5, enableShadows: true, enableAntialiasing: true }
 };
 
 @Injectable({ providedIn: 'root' })
@@ -57,9 +59,12 @@ export class BackgroundThreeService implements OnDestroy {
   constructor(
     private lightService: LightService,
     private animationService: AnimationService,
-    private commonThreeService: CommonThreeService
+    private commonThreeService: CommonThreeService,
+    private geometryOptimizationService: GeometryOptimizationService,
+    private performanceMonitoringService: PerformanceMonitoringService
   ) {
     this.detectPerformanceLevel();
+    this.setupPerformanceMonitoring();
   }
 
   /**
@@ -169,7 +174,7 @@ export class BackgroundThreeService implements OnDestroy {
   }
 
   /**
-   * Charge les modèles 3D
+   * Charge les modèles 3D avec optimisation
    */
   private loadModels(): void {
     const modelPaths = [
@@ -182,6 +187,9 @@ export class BackgroundThreeService implements OnDestroy {
         path,
         (gltf) => {
           const model = gltf.scene;
+          
+          // Optimiser les géométries du modèle chargé
+          this.optimizeLoadedModel(model);
           
           // Configuration selon le modèle
           if (path.includes('scene_fond')) {
@@ -215,17 +223,67 @@ export class BackgroundThreeService implements OnDestroy {
   }
 
   /**
-   * Crée l'environnement de la scène
+   * Optimise les géométries d'un modèle chargé
+   */
+  private optimizeLoadedModel(model: THREE.Object3D): void {
+    model.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.geometry) {
+        // Optimiser la géométrie si elle est trop complexe
+        const optimizedGeometry = this.geometryOptimizationService.optimizeExistingGeometry(child.geometry);
+        
+        // Remplacer la géométrie si une version optimisée a été créée
+        if (optimizedGeometry !== child.geometry) {
+          child.geometry.dispose(); // Libérer l'ancienne géométrie
+          child.geometry = optimizedGeometry;
+        }
+        
+        // Optimiser les matériaux
+        if (child.material) {
+          this.optimizeMaterial(child.material);
+        }
+      }
+    });
+  }
+
+  /**
+   * Optimise un matériau pour de meilleures performances
+   */
+  private optimizeMaterial(material: THREE.Material | THREE.Material[]): void {
+    const materials = Array.isArray(material) ? material : [material];
+    
+    materials.forEach(mat => {
+      if (mat instanceof THREE.MeshStandardMaterial) {
+        // Réduire la complexité des maps selon la qualité
+        if (this.qualityLevel === 'low') {
+          // Désactiver certaines maps gourmandes pour les appareils peu puissants
+          if (mat.aoMap) {
+            mat.aoMap = null;
+            mat.aoMapIntensity = 0;
+          }
+          if (mat.roughnessMap && mat.metalnessMap) {
+            // Garder seulement la roughness map si les deux sont présentes
+            mat.metalnessMap = null;
+          }
+        }
+        
+        mat.needsUpdate = true;
+      }
+    });
+  }
+
+  /**
+   * Crée l'environnement de la scène avec des géométries optimisées
    */
   private createEnvironment(): void {
-    // Créer des particules ou objets de fond selon la qualité
+    // Utiliser le service d'optimisation pour créer des géométries performantes
     const particleCount = this.qualitySettings.prismCount;
     
     for (let i = 0; i < particleCount; i++) {
-      const geometry = new THREE.SphereGeometry(
-        Math.random() * 2 + 0.5,
-        this.qualitySettings.sphereSegments,
-        this.qualitySettings.sphereSegments
+      // Utiliser les géométries optimisées du service
+      const radius = Math.random() * 2 + 0.5;
+      const geometry = this.geometryOptimizationService.createOptimizedSphere(
+        radius,
+        `environment_sphere_${i}` // Cache key unique
       );
       
       const material = new THREE.MeshStandardMaterial({
@@ -239,6 +297,76 @@ export class BackgroundThreeService implements OnDestroy {
         (Math.random() - 0.5) * 200,
         (Math.random() - 0.5) * 200,
         (Math.random() - 0.5) * 200
+      );
+      
+      if (this.qualitySettings.enableShadows) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+      
+      this.scene.add(mesh);
+    }
+
+    // Ajouter quelques géométries variées pour enrichir la scène
+    this.createOptimizedBackgroundElements();
+  }
+
+  /**
+   * Crée des éléments de fond avec différentes géométries optimisées
+   */
+  private createOptimizedBackgroundElements(): void {
+    const elementCount = Math.floor(this.qualitySettings.prismCount * 0.3); // 30% d'éléments supplémentaires
+    
+    for (let i = 0; i < elementCount; i++) {
+      let geometry: THREE.BufferGeometry;
+      
+      // Varier les types de géométries
+      const geometryType = Math.floor(Math.random() * 3);
+      switch (geometryType) {
+        case 0:
+          geometry = this.geometryOptimizationService.createOptimizedTorus(
+            Math.random() * 3 + 1,
+            Math.random() * 0.5 + 0.2,
+            `background_torus_${i}`
+          );
+          break;
+        case 1:
+          geometry = this.geometryOptimizationService.createOptimizedBox(
+            Math.random() * 2 + 0.5,
+            Math.random() * 2 + 0.5,
+            Math.random() * 2 + 0.5,
+            `background_box_${i}`
+          );
+          break;
+        default:
+          geometry = this.geometryOptimizationService.createOptimizedCylinder(
+            Math.random() * 1 + 0.3,
+            Math.random() * 1 + 0.3,
+            Math.random() * 3 + 1,
+            `background_cylinder_${i}`
+          );
+          break;
+      }
+      
+      const material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color().setHSL(Math.random(), 0.7, 0.6),
+        roughness: 0.3,
+        metalness: 0.8,
+        transparent: true,
+        opacity: 0.7
+      });
+      
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(
+        (Math.random() - 0.5) * 300,
+        (Math.random() - 0.5) * 300,
+        (Math.random() - 0.5) * 300
+      );
+      
+      mesh.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
       );
       
       if (this.qualitySettings.enableShadows) {
@@ -269,6 +397,41 @@ export class BackgroundThreeService implements OnDestroy {
   }
 
   /**
+   * Configure le monitoring des performances
+   */
+  private setupPerformanceMonitoring(): void {
+    // Configurer les alertes de performance
+    this.performanceMonitoringService.onAlert((metric, value, threshold) => {
+      console.warn(`Performance alert: ${metric} = ${value} (threshold: ${threshold})`);
+      
+      // Auto-adaptation de la qualité si les performances sont dégradées
+      if (metric === 'fps' && value < threshold && this.qualityLevel !== 'low') {
+        this.autoReduceQuality();
+      }
+    });
+
+    // Démarrer le monitoring après l'initialisation
+    setTimeout(() => {
+      this.performanceMonitoringService.startMonitoring();
+    }, 2000);
+  }
+
+  /**
+   * Réduit automatiquement la qualité en cas de performances dégradées
+   */
+  private autoReduceQuality(): void {
+    const currentLevel = this.qualityLevel;
+    
+    if (currentLevel === 'high') {
+      this.setQualityLevel('medium');
+      console.log('Quality auto-reduced from high to medium');
+    } else if (currentLevel === 'medium') {
+      this.setQualityLevel('low');
+      console.log('Quality auto-reduced from medium to low');
+    }
+  }
+
+  /**
    * Configure les paramètres de qualité
    */
   private setupQualitySettings(): void {
@@ -280,7 +443,7 @@ export class BackgroundThreeService implements OnDestroy {
   }
 
   /**
-   * Démarre la boucle de rendu
+   * Démarre la boucle de rendu avec monitoring des performances
    */
   private startRenderLoop(): void {
     if (this.currentAnimationId !== null) {
@@ -289,10 +452,16 @@ export class BackgroundThreeService implements OnDestroy {
 
     this.currentAnimationId = this.animationService.startAnimationLoop(
       (time: number, delta: number) => {
+        const frameStart = performance.now();
+        
         this.animationTime += delta;
         this.updateCamera(delta);
         this.animateModels(delta);
         this.render();
+        
+        // Monitoring des performances
+        const frameTime = performance.now() - frameStart;
+        this.performanceMonitoringService.updateFrame(frameTime);
       },
       60 // 60 FPS
     );
@@ -403,12 +572,18 @@ export class BackgroundThreeService implements OnDestroy {
       this.currentAnimationId = null;
     }
 
+    // Arrêter le monitoring des performances
+    this.performanceMonitoringService.stopMonitoring();
+
     // Nettoyer les modèles
     Object.values(this.models).forEach(model => {
       this.commonThreeService.disposeObject(model);
       this.scene.remove(model);
     });
     this.models = {};
+
+    // Nettoyer les géométries mises en cache
+    this.geometryOptimizationService.dispose();
 
     // Nettoyer la scène
     if (this.scene) {
