@@ -1,0 +1,52 @@
+<!-- Exemple d'utilisation du lazy loading dans vos templates -->
+
+<!-- Dans about.component.html -->
+<div class="container">
+  <!-- Image avec lazy loading et WebP -->
+  <img 
+    [appLazyLoad]="'assets/img/webp/logo-site.webp'" 
+    [fallbackSrc]="'assets/img/brands/logo-site.png'"
+    alt="Logo du site"
+    class="img-fluid"
+    loading="lazy"
+    width="300"
+    height="200">
+    
+  <!-- Images de marques avec lazy loading -->
+  <div class="brands-grid">
+    <img 
+      [appLazyLoad]="'assets/img/webp/logo-ambient.webp'" 
+      [fallbackSrc]="'assets/img/brands/logo-ambient.png'"
+      alt="Logo Ambient"
+      class="brand-logo"
+      loading="lazy">
+      
+    <img 
+      [appLazyLoad]="'assets/img/webp/logo-direct.webp'" 
+      [fallbackSrc]="'assets/img/brands/logo-direct.png'"
+      alt="Logo Direct"
+      class="brand-logo"
+      loading="lazy">
+  </div>
+</div>
+
+<!-- Styles pour les images lazy-loaded -->
+<style>
+.brand-logo {
+  transition: opacity 0.3s ease;
+  max-width: 150px;
+  height: auto;
+}
+
+.brand-logo[src*="data:image/svg"] {
+  opacity: 0.7;
+  filter: blur(2px);
+}
+
+.brands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+  margin-top: 2rem;
+}
+</style>

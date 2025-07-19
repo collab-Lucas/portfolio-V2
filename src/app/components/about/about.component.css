@@ -61,10 +61,10 @@ section {
 }
 
 .card-intro {
-  background: rgba(0,0,0,0.7) !important; /* Plus opaque pour la visibilité */
+  background: rgba(0, 0, 0, 0.7);
   margin-right: 0;
   width: auto;
-  transition: ease-in;
+  transition: all 0.3s ease-in;
   max-width: none;
   padding-right: 0;
   filter: contrast(100%);
@@ -72,6 +72,7 @@ section {
   border-bottom-right-radius: 0;
   border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(15px);
+  border-radius: 10px;
 }
 
 .card-body-custom {
@@ -88,10 +89,15 @@ section {
   font-size: 32px;
   font-weight: bold;
   margin-bottom: 22px;
+  color: rgba(255, 255, 255, 1) !important; 
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important; 
 }
 
 .card-text-custom {
   font-size: 28px;
+  color: rgba(255, 255, 255, 0.95) !important; 
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important; 
+  font-weight: 400; 
 }
 
 .container-fluid-no-padding {
@@ -114,30 +120,6 @@ section {
   width: auto;
   padding: 0;
   max-width: none;
-}
-
-
-.card-intro {
-  background-color: rgba(0, 0, 0, 0.5); 
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-}
-
-.card-title-custom {
-  text-align: center;
-  font-size: 32px;
-  font-weight: bold;
-  margin-bottom: 22px;
-  color: rgba(255, 255, 255, 1) !important; 
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important; 
-}
-
-.card-text-custom {
-  font-size: 28px;
-  color: rgba(255, 255, 255, 0.95) !important; 
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important; 
-  font-weight: 400; 
 }
 
 /* Media queries pour la responsivité */

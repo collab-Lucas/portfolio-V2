@@ -52,12 +52,12 @@ import {
   ɵɵproperty,
   ɵɵpureFunction1
 } from "./chunk-EOS55Q6Z.js";
-import "./chunk-PEBH6BBU.js";
 import {
   animationFrameScheduler,
   fromEvent,
   merge
 } from "./chunk-WPM5VTLQ.js";
+import "./chunk-PEBH6BBU.js";
 import {
   Subject,
   filter,
