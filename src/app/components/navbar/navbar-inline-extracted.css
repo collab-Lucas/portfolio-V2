@@ -1,0 +1,13 @@
+/* ===== EXTRACTED INLINE STYLES FROM NAVBAR COMPONENT ===== */
+/* These styles were originally inline in navbar.component.ts */
+/* Moving them to external CSS for better maintainability */
+
+.navbar {
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1030;
+  overflow: visible;
+}

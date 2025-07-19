@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/components/background/background.component.css"],
+  "sourcesContent": [".background-canvas {\r\n  position: fixed;\r\n  top: 0;\r\n  left: 0;\r\n  width: 100%;\r\n  height: 100%;\r\n  z-index: -1;\r\n}\r\n"],
+  "mappings": ";AAAA,CAAC;AACC,YAAU;AACV,OAAK;AACL,QAAM;AACN,SAAO;AACP,UAAQ;AACR,WAAS;AACX;",
+  "names": []
+}

@@ -6,6 +6,7 @@ import { AnimationMixer } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import { CommonThreeService } from '../../shared/utils/common-three.service';
+import { ThreeOptimizationService } from '../../shared/utils/three-optimization.service';
 import { LightService } from './light.service';
 import { AnimationService } from './animation.service';
 import { ResizeService } from '../../core/resize.service';
@@ -693,19 +694,14 @@ export class NavbarThreeService implements OnDestroy {
    * Optimise les lumières pour mieux faire apparaître les ombres du torus
    */
   private optimizeLightsForTorusShadows(): void {
-    if (!this.navbarScene || !this.directionalLight) return;
+    if (!this.navbarScene) return;
     
-    // Ajuster la position et l'intensité de la lumière directionnelle principale
-    //this.directionalLight.position.set(-8, 12, 8);
-    //this.directionalLight.intensity = 0.9;
+    // Utiliser le service centralisé pour l'optimisation des ombres
+    ThreeOptimizationService.optimizeLightsForTorusShadows(this.navbarScene);
     
-    // Rechercher et optimiser le torus
+    // Traitement spécial pour le torus
     this.navbarScene.traverse((obj: THREE.Object3D) => {
       if (obj instanceof THREE.Mesh) {
-        // S'assurer que tous les objets peuvent projeter et recevoir des ombres
-        obj.castShadow = true;
-        obj.receiveShadow = true;
-        
         // Si c'est le torus, appliquer un traitement spécial
         if (obj.name.includes('torus') || 
             (obj.parent && obj.parent.name && obj.parent.name.includes('torus'))) {
@@ -808,9 +804,9 @@ export class NavbarThreeService implements OnDestroy {
     }
     this.mixers = [];
     
-    // Nettoyer la scène et les ressources
+    // Utiliser le service centralisé pour nettoyer la scène
     if (this.navbarScene) {
-      this.commonService.disposeObject(this.navbarScene);
+      ThreeOptimizationService.disposeScene(this.navbarScene);
     }
     
     if (this.navbarRenderer) {

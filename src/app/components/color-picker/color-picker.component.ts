@@ -1,7 +1,8 @@
 import { Component, OnDestroy, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ColorService, ColorOption } from '../../features/ui/color.service';
-import { ThreeService, LightInfo } from '../../services/three.service';
+import { ThreeService } from '../../services/three.service';
+import { SimpleLight } from '../../features/three/light.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -15,7 +16,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, OnChanges {
   colorOptions: ColorOption[] = [];
   showPalette = false;
   selectedColor = '#66ccff'; // Default color
-  lights: LightInfo[] = [];
+  lights: SimpleLight[] = [];
   
   @Input() selectedLightName: string = '';
   @Input() initialColor: string = '';
@@ -72,7 +73,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, OnChanges {
     
     // Si nous avons une lumière spécifique sélectionnée, mettre à jour uniquement cette lumière
     if (this.selectedLightName) {
-      this.threeService.updateLight(this.selectedLightName, { color });
+      this.threeService.setLightColor(this.selectedLightName, color);
     } else {
       // Sinon, mettre à jour toutes les lumières (comportement par défaut)
       this.threeService.setCurrentColor(color);
@@ -86,7 +87,7 @@ export class ColorPickerComponent implements OnInit, OnDestroy, OnChanges {
   updateAllLightsColor(color: string): void {
     // Update all lights in both scenes
     this.lights.forEach(lightInfo => {
-      this.threeService.updateLight(lightInfo.name, { color });
+      this.threeService.setLightColor(lightInfo.name, color);
     });
   }
 

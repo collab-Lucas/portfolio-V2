@@ -1,15 +1,16 @@
 import {
+  AnimationBuilder
+} from "./chunk-V4BKCRJE.js";
+import {
   animate,
-  sequence,
   style
-} from "./chunk-GIDDXC6V.js";
+} from "./chunk-Z234S6WV.js";
 import {
   DOCUMENT,
   NgClass,
   isPlatformBrowser
 } from "./chunk-VBPCDGSJ.js";
 import {
-  ANIMATION_MODULE_TYPE,
   ApplicationRef,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -30,11 +31,8 @@ import {
   PLATFORM_ID,
   Renderer2,
   RendererFactory2,
-  RuntimeError,
   TemplateRef,
   ViewContainerRef,
-  ViewEncapsulation,
-  inject,
   setClassMetadata,
   ɵɵProvidersFeature,
   ɵɵattribute,
@@ -89,7 +87,7 @@ function parseTriggers(triggers, aliases = DEFAULT_ALIASES) {
   if (trimmedTriggers.length === 0) {
     return [];
   }
-  const parsedTriggers = trimmedTriggers.split(/\s+/).map((trigger2) => trigger2.split(":")).map((triggerPair) => {
+  const parsedTriggers = trimmedTriggers.split(/\s+/).map((trigger) => trigger.split(":")).map((triggerPair) => {
     const alias = aliases[triggerPair[0]] || triggerPair;
     return new Trigger(alias[0], alias[1]);
   });
@@ -114,17 +112,17 @@ function listenToTriggersV2(renderer, options) {
     _registerHide.forEach((fn) => listeners.push(fn()));
     _registerHide.length = 0;
   };
-  parsedTriggers.forEach((trigger2) => {
-    const useToggle = trigger2.open === trigger2.close;
+  parsedTriggers.forEach((trigger) => {
+    const useToggle = trigger.open === trigger.close;
     const showFn = useToggle ? options.toggle : options.show;
-    if (!useToggle && trigger2.close && options.hide) {
-      const triggerClose = trigger2.close;
+    if (!useToggle && trigger.close && options.hide) {
+      const triggerClose = trigger.close;
       const optionsHide = options.hide;
       const _hide = () => renderer.listen(target, triggerClose, optionsHide);
       _registerHide.push(_hide);
     }
     if (showFn) {
-      listeners.push(renderer.listen(target, trigger2.open, () => showFn(registerHide)));
+      listeners.push(renderer.listen(target, trigger.open, () => showFn(registerHide)));
     }
   });
   return () => {
@@ -1403,171 +1401,6 @@ var ComponentLoaderFactory = class _ComponentLoaderFactory {
   }], null);
 })();
 
-// node_modules/@angular/animations/fesm2022/animations.mjs
-var AnimationBuilder = class _AnimationBuilder {
-  static ɵfac = function AnimationBuilder_Factory(__ngFactoryType__) {
-    return new (__ngFactoryType__ || _AnimationBuilder)();
-  };
-  static ɵprov = ɵɵdefineInjectable({
-    token: _AnimationBuilder,
-    factory: () => (() => inject(BrowserAnimationBuilder))(),
-    providedIn: "root"
-  });
-};
-(() => {
-  (typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(AnimationBuilder, [{
-    type: Injectable,
-    args: [{
-      providedIn: "root",
-      useFactory: () => inject(BrowserAnimationBuilder)
-    }]
-  }], null, null);
-})();
-var AnimationFactory = class {
-};
-var BrowserAnimationBuilder = class _BrowserAnimationBuilder extends AnimationBuilder {
-  animationModuleType = inject(ANIMATION_MODULE_TYPE, {
-    optional: true
-  });
-  _nextAnimationId = 0;
-  _renderer;
-  constructor(rootRenderer, doc) {
-    super();
-    const typeData = {
-      id: "0",
-      encapsulation: ViewEncapsulation.None,
-      styles: [],
-      data: {
-        animation: []
-      }
-    };
-    this._renderer = rootRenderer.createRenderer(doc.body, typeData);
-    if (this.animationModuleType === null && !isAnimationRenderer(this._renderer)) {
-      throw new RuntimeError(3600, (typeof ngDevMode === "undefined" || ngDevMode) && "Angular detected that the `AnimationBuilder` was injected, but animation support was not enabled. Please make sure that you enable animations in your application by calling `provideAnimations()` or `provideAnimationsAsync()` function.");
-    }
-  }
-  build(animation2) {
-    const id = this._nextAnimationId;
-    this._nextAnimationId++;
-    const entry = Array.isArray(animation2) ? sequence(animation2) : animation2;
-    issueAnimationCommand(this._renderer, null, id, "register", [entry]);
-    return new BrowserAnimationFactory(id, this._renderer);
-  }
-  static ɵfac = function BrowserAnimationBuilder_Factory(__ngFactoryType__) {
-    return new (__ngFactoryType__ || _BrowserAnimationBuilder)(ɵɵinject(RendererFactory2), ɵɵinject(DOCUMENT));
-  };
-  static ɵprov = ɵɵdefineInjectable({
-    token: _BrowserAnimationBuilder,
-    factory: _BrowserAnimationBuilder.ɵfac,
-    providedIn: "root"
-  });
-};
-(() => {
-  (typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(BrowserAnimationBuilder, [{
-    type: Injectable,
-    args: [{
-      providedIn: "root"
-    }]
-  }], () => [{
-    type: RendererFactory2
-  }, {
-    type: Document,
-    decorators: [{
-      type: Inject,
-      args: [DOCUMENT]
-    }]
-  }], null);
-})();
-var BrowserAnimationFactory = class extends AnimationFactory {
-  _id;
-  _renderer;
-  constructor(_id, _renderer) {
-    super();
-    this._id = _id;
-    this._renderer = _renderer;
-  }
-  create(element, options) {
-    return new RendererAnimationPlayer(this._id, element, options || {}, this._renderer);
-  }
-};
-var RendererAnimationPlayer = class {
-  id;
-  element;
-  _renderer;
-  parentPlayer = null;
-  _started = false;
-  constructor(id, element, options, _renderer) {
-    this.id = id;
-    this.element = element;
-    this._renderer = _renderer;
-    this._command("create", options);
-  }
-  _listen(eventName, callback) {
-    return this._renderer.listen(this.element, `@@${this.id}:${eventName}`, callback);
-  }
-  _command(command, ...args) {
-    issueAnimationCommand(this._renderer, this.element, this.id, command, args);
-  }
-  onDone(fn) {
-    this._listen("done", fn);
-  }
-  onStart(fn) {
-    this._listen("start", fn);
-  }
-  onDestroy(fn) {
-    this._listen("destroy", fn);
-  }
-  init() {
-    this._command("init");
-  }
-  hasStarted() {
-    return this._started;
-  }
-  play() {
-    this._command("play");
-    this._started = true;
-  }
-  pause() {
-    this._command("pause");
-  }
-  restart() {
-    this._command("restart");
-  }
-  finish() {
-    this._command("finish");
-  }
-  destroy() {
-    this._command("destroy");
-  }
-  reset() {
-    this._command("reset");
-    this._started = false;
-  }
-  setPosition(p) {
-    this._command("setPosition", p);
-  }
-  getPosition() {
-    return unwrapAnimationRenderer(this._renderer)?.engine?.players[this.id]?.getPosition() ?? 0;
-  }
-  totalTime = 0;
-};
-function issueAnimationCommand(renderer, element, id, command, args) {
-  renderer.setProperty(element, `@@${id}:${command}`, args);
-}
-function unwrapAnimationRenderer(renderer) {
-  const type = renderer.ɵtype;
-  if (type === 0) {
-    return renderer;
-  } else if (type === 1) {
-    return renderer.animationRenderer;
-  }
-  return null;
-}
-function isAnimationRenderer(renderer) {
-  const type = renderer.ɵtype;
-  return type === 0 || type === 1;
-}
-
 // node_modules/ngx-bootstrap/dropdown/fesm2022/ngx-bootstrap-dropdown.mjs
 var _c0 = ["*"];
 var _c1 = (a0) => ({
@@ -2313,13 +2146,6 @@ ngx-bootstrap/utils/fesm2022/ngx-bootstrap-utils.mjs:
    *
    * Use of this source code is governed by an MIT-style license that can be
    * found in the LICENSE file at https://angular.io/license
-   *)
-
-@angular/animations/fesm2022/animations.mjs:
-  (**
-   * @license Angular v19.2.6
-   * (c) 2010-2025 Google LLC. https://angular.io/
-   * License: MIT
    *)
 */
 //# sourceMappingURL=ngx-bootstrap_dropdown.js.map
