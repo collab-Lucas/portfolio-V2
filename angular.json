@@ -29,8 +29,7 @@
               "src/styles.css"
             ],            "scripts": [
               "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js",
-              "src/assets/js/aos.min.js",
-              "src/assets/js/bold-and-dark.js"
+              "src/assets/js/aos.min.js"
             ]
           },
           "configurations": {

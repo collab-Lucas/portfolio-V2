@@ -1,5 +1,5 @@
 import { Component, ElementRef, ViewChild, OnDestroy } from '@angular/core';
-import { BackgroundThreeService } from '../../services/background-three.service';
+import { BackgroundThreeService } from '../../features/three/background-three.service';
 
 @Component({
   selector: 'app-background',

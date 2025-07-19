@@ -2,9 +2,9 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import * as THREE from 'three';
 
-import { NavbarThreeService } from './navbar-three.service';
-import { BackgroundThreeService } from './background-three.service';
-import { LightService, SimpleLight } from './threejs/light.service';
+import { NavbarThreeService } from '../features/three/navbar-three.service';
+import { BackgroundThreeService } from '../features/three/background-three.service';
+import { LightService, SimpleLight } from '../features/three/light.service';
 
 /**
  * Service principal Three.js qui sert de façade pour orchestrer les différents services spécialisés

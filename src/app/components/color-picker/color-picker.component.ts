@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ColorService, ColorOption } from '../../services/color.service';
+import { ColorService, ColorOption } from '../../features/ui/color.service';
 import { ThreeService, LightInfo } from '../../services/three.service';
 import { Subscription } from 'rxjs';
 
