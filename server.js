@@ -9,6 +9,13 @@ const DIST_DIR = join(__dirname, 'dist/portfolio-v2/browser');
 
 const app = express();
 app.use(compression());
+
+// Serve robots.txt as plain text from public directory
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.sendFile(join(__dirname, 'public', 'robots.txt'));
+});
+
 app.use(express.static(DIST_DIR));
 app.get('*', (req, res) => {
   res.sendFile(join(DIST_DIR, 'index.html'));
