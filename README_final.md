@@ -1,11 +1,17 @@
 # Portfolio Lucas Bonneau - Version 2
+##📋 Description
+Portfolio personnel développé avec Angular 19, Bootstrap et Three.js, présentant mes compétences en développement web frontend à travers des animations 3D interactives. Cette version optimisée met l'accent sur les performances, l'accessibilité et l’expérience utilisateur.
 
-## 📋 Description
+## 🎯 Objectifs et apprentissages
+Ce projet a été un excellent moyen d’appréhender un projet Angular de grande envergure, combinant Bootstrap pour la structure responsive et Three.js pour les visuels 3D. J’y ai intégré des objets 3D modélisés sous Blender, et l’apparence graphique a été conçue avec Bootstrap Studio.
 
-Portfolio personnel développé avec Angular 19 et Three.js, présentant mes compétences en développement web frontend avec des animations 3D interactives. Cette version optimisée met l'accent sur les performances et l'expérience utilisateur.
+Il m’a permis d’expérimenter de nombreux aspects du développement frontend, notamment la gestion fine des animations, l’optimisation des performances, et l’intégration de scènes 3D complexes.
 
-### Processus de Création
-Ce projet a été créé avec Angular, Bootstrap et Three.js. Les objets 3D ont été modélisés sous Blender, et l'apparence Bootstrap a été réalisée avec Bootstrap Studio. GitHub Copilot a été utilisé pour donner des conseils sur les étapes à suivre pour la création du projet. Le mode agent a également été utilisé pour aider à corriger les erreurs et optimiser, notamment celles liées à Three.js.
+## 🤖 Utilisation de l'IA
+J’ai également fait appel à GitHub Copilot pour obtenir des suggestions de code, corriger certaines erreurs et guider certaines étapes du développement. Son utilisation a été précieuse sur plusieurs points, bien qu’elle ait parfois complexifié le projet, notamment en générant du code difficile à maintenir ou peu adapté au contexte.
+
+Cette expérience m’a permis de mieux comprendre le potentiel et les limites des outils d’intelligence artificielle dans le développement logiciel. Si GitHub Copilot peut être un véritable atout, je déconseille l’utilisation du mode Agent sur de trop larges portions de code, car cela peut rapidement devenir contre-productif.
+
 
 ## 🚀 Technologies Utilisées
 
