@@ -8,7 +8,6 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { ButtonsModule } from 'ngx-bootstrap/buttons';
 import { FormsModule } from '@angular/forms';
 import { provideRouter } from '@angular/router';
-import { PerformanceUtils } from './app/services/utils/performance.utils';
 
 // Mesurer le temps de démarrage
 const startTime = performance.now();
@@ -41,19 +40,13 @@ Promise.all([
   })
 ]).then((results) => {
   const app = results[results.length - 1]; // Last element is the app
-  // Initialize performance monitoring
-  const performanceUtils = new PerformanceUtils();
-  performanceUtils.startPerformanceMonitoring();
-  
-  // Measure load time
-  const loadTime = performanceUtils.measureLoadTime(startTime);
-  
+  // PerformanceUtils is missing, so we fallback to basic performance logging
+  const loadTime = performance.now() - startTime;
   console.log(`🚀 Portfolio loaded in ${loadTime.toFixed(2)}ms`);
   
-  // Log performance metrics after 5 seconds
+  // Optionally, add your own performance logging here
   setTimeout(() => {
-    performanceUtils.logMetrics();
-    performanceUtils.optimizeBasedOnMetrics();
+    console.log('Performance metrics logging placeholder.');
   }, 5000);
   
   return app;

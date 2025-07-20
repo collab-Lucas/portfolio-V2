@@ -1,11 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { BackgroundComponent } from './components/background/background.component';
 import { AboutComponent } from './components/about/about.component';
 import { SkillsComponent } from './components/skills/skills.component';
 import { ContactFormComponent } from './components/contact-form/contact-form.component';
-import { PerformanceOrchestrator } from './services/performance-orchestrator.service';
 
 @Component({
   selector: 'app-root',
@@ -34,10 +33,10 @@ import { PerformanceOrchestrator } from './services/performance-orchestrator.ser
       <footer class="footer-bar">
         <div class="icon-container">
             <a href="https://www.linkedin.com/in/lucas-bonneau-8396bb144/" target="_blank" class="icon-link">
-                <img src="assets/img/brands/icone_linkedin.svg" alt="LinkedIn" class="footer-icon">
+                <img src="assets/img/brands/icone_linkedin.svg" alt="LinkedIn" class="footer-icon" loading="lazy">
           </a>
             <a href="https://github.com/collab-Lucas" target="_blank" class="icon-link">
-                <img src="assets/img/brands/icone_github.svg" alt="GitHub" class="footer-icon">
+                <img src="assets/img/brands/icone_github.svg" alt="GitHub" class="footer-icon" loading="lazy">
           </a>
         </div>
       </footer>
@@ -46,19 +45,8 @@ import { PerformanceOrchestrator } from './services/performance-orchestrator.ser
   styles: [],
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit {
+export class AppComponent {
   title = 'Portfolio Lucas Bonneau';
 
-  constructor(private performanceOrchestrator: PerformanceOrchestrator) {}
-
-  ngOnInit(): void {
-    // Le PerformanceOrchestrator s'initialise automatiquement
-    console.log('🚀 App Component initialized with Ultra Performance Mode');
-    
-    // Optionnel : Log des métriques après chargement
-    setTimeout(() => {
-      const metrics = this.performanceOrchestrator.getPerformanceMetrics();
-      console.log('📊 Performance Metrics:', metrics);
-    }, 3000);
-  }
+  constructor() {}
 }
