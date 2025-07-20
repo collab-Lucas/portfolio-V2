@@ -1,6 +1,27 @@
 {
   "name": "portfolio-v2",
-  "version": "0.0.0",
+  "version": "2.0.0",
+  "description": "Portfolio personnel de Lucas Bonneau - Angular 19 avec Three.js et optimisations avancées",
+  "author": "Lucas Bonneau <lucasbonneau9@gmail.com>",
+  "homepage": "https://lucas-bonneau-portfolio.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/collab-Lucas/portfolio-V2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/collab-Lucas/portfolio-V2/issues"
+  },
+  "keywords": [
+    "portfolio",
+    "angular",
+    "threejs",
+    "3d",
+    "frontend",
+    "web-development",
+    "typescript",
+    "performance",
+    "optimization"
+  ],
   "type": "module",
   "scripts": {
     "ng": "ng",

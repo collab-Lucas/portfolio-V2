@@ -193,10 +193,27 @@ Projet personnel - Tous droits réservés
 ## 👨‍💻 Auteur
 
 **Lucas Bonneau**
-- Portfolio : [URL_DU_PORTFOLIO]
-- LinkedIn : [PROFIL_LINKEDIN]
-- GitHub : [PROFIL_GITHUB]
+- Portfolio : https://lucas-bonneau-portfolio.vercel.app
+- LinkedIn : [Profil LinkedIn](https://www.linkedin.com/in/lucas-bonneau-8396bb144/)
+- GitHub : [collab-Lucas](https://github.com/collab-Lucas)
 - Email : lucasbonneau9@gmail.com
+
+## 🔗 Liens et Ressources
+
+### Three.js
+- [Documentation Three.js](https://threejs.org/docs/)
+- [Demo Scroll Animation](https://github.com/fireship-io/threejs-scroll-animation-demo/blob/main/main.js)
+- [Tutoriel YouTube](https://www.youtube.com/watch?v=Q7AOvWpIVHU)
+
+### Angular
+- [JavaScript Objects - OpenClassrooms](https://openclassrooms.com/fr/courses/7696886-apprenez-a-programmer-avec-javascript-1/8204834-structurez-des-donnees-grace-aux-objets)
+- [Angular Débutant - OpenClassrooms](https://openclassrooms.com/fr/courses/7471261-debutez-avec-angular/7549436-construisez-une-application-angular-avec-le-cli)
+- [Application Angular Complète](https://www.ganatan.com/tutorials/creer-application-web-complete-avec-angular)
+- [Tutoriel Angular 1](https://www.youtube.com/watch?v=3qVbO45ucoA)
+- [Tutoriel Angular 2](https://www.youtube.com/watch?v=TjS39N11O7U)
+
+### Développement
+- **Aide, optimisation, conseils et réparation des erreurs :** GitHub Copilot
 
 ---
 
