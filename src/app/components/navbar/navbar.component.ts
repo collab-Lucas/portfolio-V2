@@ -108,7 +108,7 @@ import { NavbarEffectsService } from '../../features/ui/navbar-effects.service';
       </div>
 
       <div class="scroll-indicator" [class.hidden]="isShrunk$ | async">
-        <div class="scroll-text">Scroll</div>
+        <div class="scroll-text">CLIC</div>
         <div class="scroll-arrow"></div>
       </div>
     </nav>
@@ -201,6 +201,14 @@ export class NavbarComponent implements OnInit, OnDestroy {
     if (this.navbarCanvas && this.navbarCanvas.nativeElement) {
       // Passer null pour utiliser les valeurs par défaut du service
       this.threeService.initNavbar(this.navbarCanvas.nativeElement);
+      
+    // Charger le torus seulement après l'animation des lumières (lazy loading)
+    // Note: Le lazy loading du torus sera implémenté dans le service Three.js
+    // setTimeout(() => {
+    //   if (this.threeService.loadTorusModel) {
+    //     this.threeService.loadTorusModel();
+    //   }
+    // }, 3000); // 3 secondes après le chargement initial
       
       // Appeler onResize une fois au démarrage pour gérer la largeur initiale
       this.threeService.onResize();

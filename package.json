@@ -10,7 +10,16 @@
     "css:build": "npx postcss src/styles/main.css -o src/styles/main.generated.css",
     "images:optimize": "node optimize-images.js",
     "serve:prod": "node server.js",
-    "ultra": "npm run images:optimize && npm run tailwind:build && npm run css:build && npm run build && npm run serve:prod"
+    "ultra": "npm run images:optimize && npm run tailwind:build && npm run css:build && npm run build && npm run serve:prod",
+    "cleanup": "node cleanup-assets.js",
+    "optimize:css": "node optimize-css.js",
+    "build:optimized": "node build-optimized.js",
+    "compress": "node compress-assets.js",
+    "predeploy": "npm run cleanup && npm run build:optimized",
+    "deploy": "npm run predeploy && npm start",
+    "analyze": "npx webpack-bundle-analyzer dist/portfolio-v2/browser/stats.json",
+    "serve:production": "node server-production.js",
+    "start:prod": "NODE_ENV=production node server-production.js"
   },
   "private": true,
   "dependencies": {
@@ -24,6 +33,8 @@
     "@angular/router": "^19.2.0",
     "bootstrap": "^5.3.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^7.2.0",
     "ngx-bootstrap": "^19.0.2",
     "sharp": "^0.34.3",
     "three": "^0.178.0",
@@ -37,9 +48,9 @@
     "@types/bootstrap": "^5.2.10",
     "@types/jasmine": "~5.1.0",
     "@types/three": "^0.175.0",
-    "autoprefixer": "^10.4.16",
+    "autoprefixer": "^10.4.21",
     "compression": "^1.8.1",
-    "cssnano": "^6.0.1",
+    "cssnano": "^6.1.2",
     "glob": "^11.0.3",
     "http-server": "^14.1.1",
     "imagemin": "^9.0.1",
@@ -53,9 +64,10 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "postcss": "^8.4.31",
+    "postcss": "^8.5.6",
     "postcss-cli": "^11.0.1",
-    "tailwindcss": "^3.4.1",
-    "typescript": "~5.7.2"
+    "tailwindcss": "^3.4.16",
+    "typescript": "~5.7.2",
+    "webpack-bundle-analyzer": "^4.10.2"
   }
 }

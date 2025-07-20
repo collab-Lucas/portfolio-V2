@@ -44,6 +44,7 @@ section {
 /* Nouvelles classes pour remplacer les styles inline */
 .full-height-section-intro {
   height: 700px;
+  margin-top: -150px;
   display: flex;
   flex-direction: column;
   justify-content: center;

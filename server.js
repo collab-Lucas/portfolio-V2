@@ -20,7 +20,7 @@ app.use(express.static(DIST_DIR));
 app.get('*', (req, res) => {
   res.sendFile(join(DIST_DIR, 'index.html'));
 });
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Serveur ultra-optimisé sur http://localhost:${PORT}`);
 });

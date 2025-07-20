@@ -65,8 +65,10 @@ import {
   Vector2,
   Vector3,
   VectorKeyframeTrack
-} from "./chunk-K2FJVTG4.js";
-import "./chunk-RRVX5PGV.js";
+} from "./chunk-JWQPEZRE.js";
+import {
+  __spreadValues
+} from "./chunk-RRVX5PGV.js";
 
 // node_modules/three/examples/jsm/utils/BufferGeometryUtils.js
 function toTrianglesDrawMode(geometry, drawMode) {
@@ -891,7 +893,6 @@ var GLTFTextureWebPExtension = class {
   constructor(parser) {
     this.parser = parser;
     this.name = EXTENSIONS.EXT_TEXTURE_WEBP;
-    this.isSupported = null;
   }
   loadTexture(textureIndex) {
     const name = this.name;
@@ -908,32 +909,13 @@ var GLTFTextureWebPExtension = class {
       const handler = parser.options.manager.getHandler(source.uri);
       if (handler !== null) loader = handler;
     }
-    return this.detectSupport().then(function(isSupported) {
-      if (isSupported) return parser.loadTextureImage(textureIndex, extension.source, loader);
-      if (json.extensionsRequired && json.extensionsRequired.indexOf(name) >= 0) {
-        throw new Error("THREE.GLTFLoader: WebP required by asset but unsupported.");
-      }
-      return parser.loadTexture(textureIndex);
-    });
-  }
-  detectSupport() {
-    if (!this.isSupported) {
-      this.isSupported = new Promise(function(resolve) {
-        const image = new Image();
-        image.src = "data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA";
-        image.onload = image.onerror = function() {
-          resolve(image.height === 1);
-        };
-      });
-    }
-    return this.isSupported;
+    return parser.loadTextureImage(textureIndex, extension.source, loader);
   }
 };
 var GLTFTextureAVIFExtension = class {
   constructor(parser) {
     this.parser = parser;
     this.name = EXTENSIONS.EXT_TEXTURE_AVIF;
-    this.isSupported = null;
   }
   loadTexture(textureIndex) {
     const name = this.name;
@@ -950,25 +932,7 @@ var GLTFTextureAVIFExtension = class {
       const handler = parser.options.manager.getHandler(source.uri);
       if (handler !== null) loader = handler;
     }
-    return this.detectSupport().then(function(isSupported) {
-      if (isSupported) return parser.loadTextureImage(textureIndex, extension.source, loader);
-      if (json.extensionsRequired && json.extensionsRequired.indexOf(name) >= 0) {
-        throw new Error("THREE.GLTFLoader: AVIF required by asset but unsupported.");
-      }
-      return parser.loadTexture(textureIndex);
-    });
-  }
-  detectSupport() {
-    if (!this.isSupported) {
-      this.isSupported = new Promise(function(resolve) {
-        const image = new Image();
-        image.src = "data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAABcAAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAEAAAABAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQAMAAAAABNjb2xybmNseAACAAIABoAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAAB9tZGF0EgAKCBgABogQEDQgMgkQAAAAB8dSLfI=";
-        image.onload = image.onerror = function() {
-          resolve(image.height === 1);
-        };
-      });
-    }
-    return this.isSupported;
+    return parser.loadTextureImage(textureIndex, extension.source, loader);
   }
 };
 var GLTFMeshoptCompression = class {
@@ -1245,11 +1209,11 @@ var GLTFCubicSplineInterpolant = class extends Interpolant {
     return result;
   }
 };
-var _q = new Quaternion();
+var _quaternion = new Quaternion();
 var GLTFCubicSplineQuaternionInterpolant = class extends GLTFCubicSplineInterpolant {
   interpolate_(i1, t0, t, t1) {
     const result = super.interpolate_(i1, t0, t, t1);
-    _q.fromArray(result).normalize().toArray(result);
+    _quaternion.fromArray(result).normalize().toArray(result);
     return result;
   }
 };
@@ -2524,6 +2488,9 @@ var GLTFParser = class {
       }
       if (!parser.associations.has(node)) {
         parser.associations.set(node, {});
+      } else if (nodeDef.mesh !== void 0 && parser.meshCache.refs[nodeDef.mesh] > 1) {
+        const mapping = parser.associations.get(node);
+        parser.associations.set(node, __spreadValues({}, mapping));
       }
       parser.associations.get(node).nodes = nodeIndex;
       return node;

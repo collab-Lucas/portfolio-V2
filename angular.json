@@ -40,13 +40,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "800kB",
-                  "maximumError": "1.5MB"
+                  "maximumWarning": "1MB",
+                  "maximumError": "2MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "20kB",
-                  "maximumError": "50kB"
+                  "maximumWarning": "50kB",
+                  "maximumError": "100kB"
                 }
               ],
               "outputHashing": "all",
@@ -64,6 +64,7 @@
               "extractLicenses": true,
               "serviceWorker": false,
               "crossOrigin": "anonymous",
+              "subresourceIntegrity": true,
               "index": {
                 "input": "src/index.html",
                 "output": "index.html"

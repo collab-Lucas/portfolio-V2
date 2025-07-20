@@ -1299,9 +1299,9 @@ export class LightService {
   /**
    * Anime l'intensité des lumières de 0 à leur valeur cible sur une durée donnée
    * @param targetValues Valeurs d'intensité cibles pour chaque lumière
-   * @param duration Durée de l'animation en secondes (défaut: 2 secondes)
+   * @param duration Durée de l'animation en secondes (défaut: 5 secondes)
    */
-  animateLightsIntensity(targetValues: { [lightName: string]: number }, duration: number = 2): void {
+  animateLightsIntensity(targetValues: { [lightName: string]: number }, duration: number = 5): void {
     // Démarrer toutes les lumières à 0
     Object.keys(targetValues).forEach(lightName => {
       this.setLightProperty(lightName, 'intensity', 0);
