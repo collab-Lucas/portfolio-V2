@@ -5,18 +5,12 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
-    "build:prod": "ng build --configuration production",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "ultra": "npm run kill-port && npm run build:prod && npm run optimize:images && node server.js",
-    "kill-port": "npx kill-port 8080 || exit 0",
-    "optimize:images": "node optimize-images.js",
-    "dev": "ng serve",
-    "analyze": "npm run build:prod && npx webpack-bundle-analyzer dist/portfolio-v2/browser/stats.json",
-    "debug:performance": "npm run build:stats && npm run analyze:source",
-    "clean:dist": "rmdir /s /q dist 2>nul || true",
-    "fresh:build": "npm run clean:dist && npm run optimize:all"
+    "build": "ng build --configuration production --aot --output-hashing=all --source-map=false",
+    "tailwind:build": "npx tailwindcss -i ./src/styles/tailwind.css -o ./src/styles/tailwind.generated.css --minify",
+    "css:build": "npx postcss src/styles/main.css -o src/styles/main.generated.css",
+    "images:optimize": "node optimize-images.js",
+    "serve:prod": "node server.js",
+    "ultra": "npm run images:optimize && npm run tailwind:build && npm run css:build && npm run build && npm run serve:prod"
   },
   "private": true,
   "dependencies": {
@@ -28,13 +22,11 @@
     "@angular/platform-browser": "^19.2.0",
     "@angular/platform-browser-dynamic": "^19.2.0",
     "@angular/router": "^19.2.0",
-    "bootstrap": "^5.3.5",
-    "kill-port": "^2.0.1",
+    "bootstrap": "^5.3.7",
+    "express": "^4.21.2",
     "ngx-bootstrap": "^19.0.2",
-    "rxjs": "~7.8.0",
-    "three": "^0.175.0",
-    "three-stdlib": "^2.36.0",
-    "tslib": "^2.3.0",
+    "sharp": "^0.34.3",
+    "three": "^0.178.0",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
@@ -45,8 +37,9 @@
     "@types/bootstrap": "^5.2.10",
     "@types/jasmine": "~5.1.0",
     "@types/three": "^0.175.0",
+    "autoprefixer": "^10.4.16",
     "compression": "^1.8.1",
-    "express": "^4.21.2",
+    "cssnano": "^6.0.1",
     "glob": "^11.0.3",
     "http-server": "^14.1.1",
     "imagemin": "^9.0.1",
@@ -60,7 +53,9 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "sharp": "^0.34.3",
+    "postcss": "^8.4.31",
+    "postcss-cli": "^11.0.1",
+    "tailwindcss": "^3.4.1",
     "typescript": "~5.7.2"
   }
 }
