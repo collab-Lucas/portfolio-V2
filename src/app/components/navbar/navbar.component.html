@@ -59,7 +59,10 @@
       <button class="btn btn-icon me-2" 
               (click)="toggleLightControls($event)"
               title="Contrôles d'éclairage">
-        <img src="assets/img/brands/logo site.png" alt="Paramètres" class="logo-settings" />
+        <img [appLazyLoad]="'assets/img/webp/logo site.webp'" 
+             [fallbackSrc]="'assets/img/brands/logo site.png'"
+             alt="Paramètres" 
+             class="logo-settings" />
       </button>
       <span class="navbar-brand">Lucas Bonneau</span>
     </div>
