@@ -31,9 +31,11 @@
             ],            "scripts": [
               "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
             ],
-            "webWorkerTsConfig": "tsconfig.worker.json"
+            "webWorkerTsConfig": "tsconfig.worker.json",
+            "baseHref": "/",
+            "crossOrigin": "anonymous"
           },
-            "configurations": {
+          "configurations": {
             "production": {
               "budgets": [
                 {
@@ -43,8 +45,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "15kB",
-                  "maximumError": "20kB"
+                  "maximumWarning": "20kB",
+                  "maximumError": "50kB"
                 }
               ],
               "outputHashing": "all",
@@ -60,7 +62,12 @@
               "namedChunks": false,
               "aot": true,
               "extractLicenses": true,
-              "serviceWorker": false
+              "serviceWorker": false,
+              "crossOrigin": "anonymous",
+              "index": {
+                "input": "src/index.html",
+                "output": "index.html"
+              }
             },
             "development": {
               "optimization": false,

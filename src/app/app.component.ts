@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { BackgroundComponent } from './components/background/background.component';
 import { AboutComponent } from './components/about/about.component';
 import { SkillsComponent } from './components/skills/skills.component';
 import { ContactFormComponent } from './components/contact-form/contact-form.component';
+import { PerformanceOrchestrator } from './services/performance-orchestrator.service';
 
 @Component({
   selector: 'app-root',
@@ -45,6 +46,19 @@ import { ContactFormComponent } from './components/contact-form/contact-form.com
   styles: [],
   styleUrls: ['./app.component.css']
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = 'Portfolio Lucas Bonneau';
+
+  constructor(private performanceOrchestrator: PerformanceOrchestrator) {}
+
+  ngOnInit(): void {
+    // Le PerformanceOrchestrator s'initialise automatiquement
+    console.log('🚀 App Component initialized with Ultra Performance Mode');
+    
+    // Optionnel : Log des métriques après chargement
+    setTimeout(() => {
+      const metrics = this.performanceOrchestrator.getPerformanceMetrics();
+      console.log('📊 Performance Metrics:', metrics);
+    }, 3000);
+  }
 }
