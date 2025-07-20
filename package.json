@@ -37,7 +37,13 @@
     "@fullhuman/postcss-purgecss": "^7.0.2",
     "@types/jasmine": "~5.1.0",
     "@types/three": "^0.175.0",
+    "compression": "^1.8.1",
+    "express": "^5.1.0",
+    "glob": "^11.0.3",
     "imagemin": "^9.0.1",
+    "imagemin-avif": "^0.1.6",
+    "imagemin-mozjpeg": "^10.0.0",
+    "imagemin-pngquant": "^10.0.0",
     "imagemin-webp": "^8.0.0",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",
@@ -45,6 +51,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "sharp": "^0.34.3",
     "typescript": "~5.7.2"
   }
 }
