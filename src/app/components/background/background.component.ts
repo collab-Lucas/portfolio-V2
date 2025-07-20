@@ -1,40 +1,28 @@
 import { Component, ElementRef, ViewChild, OnDestroy } from '@angular/core';
-import { ThreeService } from '../../services/three.service';
+import { BackgroundThreeService } from '../../features/three/background-three.service';
 
 @Component({
   selector: 'app-background',
   standalone: true,
-  template: `
-    <canvas #threeBackgroundCanvas class="background-canvas"></canvas>
-  `,
-  styles: [`
-    .background-canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
-    }
-  `]
+  templateUrl: './background.component.html',
+  styleUrls: ['./background.component.css']
 })
 export class BackgroundComponent implements OnDestroy {
   @ViewChild('threeBackgroundCanvas') backgroundCanvas!: ElementRef<HTMLCanvasElement>;
 
-  constructor(private threeService: ThreeService) {}
+  constructor(private backgroundThreeService: BackgroundThreeService) {}
 
   ngAfterViewInit() {
-    this.threeService.initBackground(this.backgroundCanvas.nativeElement);
-    this.threeService.animate();
+    this.backgroundThreeService.init(this.backgroundCanvas.nativeElement);
     window.addEventListener('resize', this.onResize.bind(this));
   }
 
   ngOnDestroy() {
     window.removeEventListener('resize', this.onResize.bind(this));
-    this.threeService.dispose();
+    this.backgroundThreeService.dispose();
   }
 
   private onResize() {
-    this.threeService.onResize();
+    this.backgroundThreeService.onResize();
   }
 }

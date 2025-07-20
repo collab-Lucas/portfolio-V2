@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# If you have a sitemap, use the full URL (required by Google):
+# Sitemap: https://votre-domaine.com/sitemap.xml
+
+# Portfolio Lucas Bonneau robots.txt

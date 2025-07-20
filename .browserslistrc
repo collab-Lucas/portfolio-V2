@@ -1,0 +1,18 @@
+# Navigateurs modernes seulement (élimine les polyfills legacy)
+last 2 Chrome major versions
+last 2 Firefox major versions
+last 2 Safari major versions
+last 2 Edge major versions
+
+# Exclure les anciens navigateurs
+not IE 11
+not IE_Mob 11
+not dead
+not op_mini all
+
+# Support mobile moderne
+iOS >= 12
+Android >= 6
+
+# Performance ciblée
+> 1%

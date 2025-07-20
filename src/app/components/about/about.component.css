@@ -1,0 +1,148 @@
+/* Section principale sans fond */
+section {
+  min-height: 100vh;
+  position: relative;
+  /* Fallback pour AOS - assurer la visibilité même si AOS ne fonctionne pas */
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Fallback pour les éléments AOS */
+[data-aos] {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.intro-section {
+  position: absolute;
+  top: calc(50vh); /* Centrer avec ajustement */
+  transform: translate(-50%,-50%);
+  left: 50%;
+  z-index: 10; /* Assurer que le texte est au-dessus */
+}
+
+/* Styles pour les textes principaux avec ombre renforcée */
+.intro-section h1 {
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+  font-weight: bold;
+  color: #ffffff !important; /* Forcer la couleur blanche */
+  font-size: 3rem;
+}
+
+.intro-section p.lead {
+  text-shadow: 3px 3px 12px rgba(0, 0, 0, 0.9);
+  color: #ffffff !important; /* Forcer la couleur blanche */
+  font-size: 1.5rem;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Nouvelles classes pour remplacer les styles inline */
+.full-height-section-intro {
+  height: 700px;
+  margin-top: -150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+}
+
+.full-height-section{
+  height: 1000px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+}
+
+.card-intro {
+  background: rgba(0, 0, 0, 0.7);
+  margin-right: 0;
+  width: auto;
+  transition: all 0.3s ease-in;
+  max-width: none;
+  padding-right: 0;
+  filter: contrast(100%);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  border-radius: 10px;
+}
+
+.card-body-custom {
+  margin-left: 100px;
+  margin-right: 0;
+  padding: 19px;
+  width: auto;
+  padding-bottom: 19px;
+  padding-right: 200px;
+}
+
+.card-title-custom {
+  text-align: center;
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 22px;
+  color: rgba(255, 255, 255, 1) !important; 
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important; 
+}
+
+.card-text-custom {
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.95) !important; 
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important; 
+  font-weight: 400; 
+}
+
+.container-fluid-no-padding {
+  margin-right: 0;
+  margin-left: 0;
+  width: auto;
+  max-width: 100%;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.row-no-margin {
+  width: auto;
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.col-no-padding {
+  margin-right: 0;
+  width: auto;
+  padding: 0;
+  max-width: none;
+}
+
+/* Media queries pour la responsivité */
+@media (max-width: 768px) {
+  .intro-section h1 {
+    font-size: 2rem !important;
+  }
+  
+  .intro-section p.lead {
+    font-size: 1.2rem !important;
+  }
+  
+  .card-title-custom {
+    font-size: 24px !important;
+  }
+  
+  .card-text-custom {
+    font-size: 18px !important;
+  }
+  
+  .card-body-custom {
+    margin-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}
