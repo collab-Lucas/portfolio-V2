@@ -189,9 +189,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.navbarEffects.setNavbarState(savedShrinkState);
       }, 100);
     } else {
-      // Si aucun état sauvegardé, utiliser l'état par défaut (navbar rétractée)
+      // Si aucun état sauvegardé, utiliser l'état par défaut (navbar )
       setTimeout(() => {
-        this.navbarEffects.setNavbarState(true);
+        this.navbarEffects.setNavbarState(false);
       }, 100);
     }
   }

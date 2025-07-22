@@ -727,51 +727,61 @@ private animate(): void {
   }
   
   /**
-   * Déplace la caméra selon le scroll avec des transitions ultra fluides
+   * Déplace la caméra selon le scroll (en pourcentage de la hauteur totale du site) avec zones de stagnation
    */
-private moveCamera() {
-  const t = document.body.getBoundingClientRect().top;
+  private moveCamera() {
+  const scrollY = window.scrollY || window.pageYOffset;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const scrollPercent = docHeight > 0 ? scrollY / docHeight : 0;
+
   const initialPosition = { x: -3, y: 0, z: 300 };
   const bureauPosition = { x: 16, y: -20, z: 9.5 };
   const fondPosition = { x: 62, y: 30, z: -70 };
   const initialRotation = THREE.MathUtils.degToRad(-3.69);
   const bureauRotation = THREE.MathUtils.degToRad(-3.69 + 35);
   const fondRotation = THREE.MathUtils.degToRad(-3.69 + 70);
-  let target = { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z, ry: this.camera.rotation.y };
-  if (t > -650) {
-    const progress = Math.abs(t) / 650;
+  const additionalRotation = THREE.MathUtils.degToRad(-40);
+
+  const section1End = 0.15;// 0% -> 25% : transition initial -> bureau
+  const section2End = 0.30;// 25% -> 35% : bureau (stagne)
+  const section3End = 0.45;// 35% -> 65% : transition bureau -> fond
+  const section4End = 0.60; // 65% -> 75% : fond (stagne)
+  // 75% -> 100% : fond final (mouvement libre)
+
+  let target = { x: initialPosition.x, y: initialPosition.y, z: initialPosition.z, ry: initialRotation };
+
+  if (scrollPercent < section1End) {// Section 1 : transition initial -> bureau
+    const progress = scrollPercent / section1End;
     target.x = initialPosition.x + (bureauPosition.x - initialPosition.x) * progress;
     target.y = initialPosition.y + (bureauPosition.y - initialPosition.y) * progress;
     target.z = initialPosition.z + (bureauPosition.z - initialPosition.z) * progress;
     target.ry = initialRotation + (bureauRotation - initialRotation) * progress;
-  } else if (t >= -1050 && t <= -650) {
+  } else if (scrollPercent < section2End) {// Section 2 : bureau (stagne)
     target.x = bureauPosition.x;
     target.y = bureauPosition.y;
     target.z = bureauPosition.z;
     target.ry = bureauRotation;
-  } else if (t > -1800 && t <= -1050) {
-    const progress = (Math.abs(t) - 1050) / 750;
+  } else if (scrollPercent < section3End) {// Section 3 : transition bureau -> fond
+    const progress = (scrollPercent - section2End) / (section3End - section2End);
+    const targetRot = fondRotation + additionalRotation;
     target.x = bureauPosition.x + (fondPosition.x - bureauPosition.x) * progress;
     target.y = bureauPosition.y + (fondPosition.y - bureauPosition.y) * progress;
     target.z = bureauPosition.z + (fondPosition.z - bureauPosition.z) * progress;
-    const additionalRotation = THREE.MathUtils.degToRad(-40);
-    const targetRotation = fondRotation + additionalRotation;
-    target.ry = bureauRotation + (targetRotation - bureauRotation) * progress;
-  } else if (t >= -2100 && t <= -1800) {
+    target.ry = bureauRotation + (targetRot - bureauRotation) * progress;
+  } else if (scrollPercent < section4End) {// Section 4 : fond (stagne)
     target.x = fondPosition.x;
     target.y = fondPosition.y;
     target.z = fondPosition.z;
-    const additionalRotation = THREE.MathUtils.degToRad(-40);
     target.ry = fondRotation + additionalRotation;
-  } else {
-    const progress = (Math.abs(t) - 2100) / 400;
+  } else {// Section 5 : fond final (mouvement libre)
+    // Section finale : éloigner beaucoup plus la caméra (comme dans ta version d'origine)
+    const progress = (scrollPercent - section4End) / (1 - section4End);
     target.x = fondPosition.x + progress * 20;
     target.y = fondPosition.y + progress * -10;
-    target.z = fondPosition.z + progress * 50;
-    const additionalRotation = THREE.MathUtils.degToRad(-40);
+    target.z = fondPosition.z + progress * 200; // <-- ici, augmente la valeur (ex : 200) pour reculer plus loin
     target.ry = fondRotation + additionalRotation;
   }
-  // Stocke la cible
+
   this.cameraTargetPosition.set(target.x, target.y, target.z);
   this.cameraTargetRotationY = target.ry;
 }
