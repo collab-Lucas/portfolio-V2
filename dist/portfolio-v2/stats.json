@@ -1,5 +1,16 @@
 {
   "inputs": {
+    "node_modules/@vercel/analytics/dist/index.mjs": {
+      "bytes": 5288,
+      "imports": [
+        {
+          "path": "<runtime>",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
     "node_modules/@angular/core/fesm2022/untracked-BKcld_ew.mjs": {
       "bytes": 20949,
       "imports": [
@@ -6462,7 +6473,7 @@
       "format": "esm"
     },
     "src/app/features/three/background-three.service.ts": {
-      "bytes": 36364,
+      "bytes": 37149,
       "imports": [
         {
           "path": "@angular/core",
@@ -6611,7 +6622,7 @@
       "format": "esm"
     },
     "src/app/components/navbar/navbar.component.ts": {
-      "bytes": 40603,
+      "bytes": 40593,
       "imports": [
         {
           "path": "@angular/core",
@@ -7095,8 +7106,13 @@
       "format": "esm"
     },
     "src/main.ts": {
-      "bytes": 1912,
+      "bytes": 2001,
       "imports": [
+        {
+          "path": "node_modules/@vercel/analytics/dist/index.mjs",
+          "kind": "import-statement",
+          "original": "@vercel/analytics"
+        },
         {
           "path": "node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
           "kind": "import-statement",
@@ -7145,16 +7161,12 @@
       ],
       "format": "esm"
     },
-    "src/app/app.component.css": {
-      "bytes": 2585,
-      "imports": []
-    },
     "src/app/components/navbar/navbar.component.css": {
       "bytes": 12809,
       "imports": []
     },
-    "src/app/components/contact-form/contact-form.component.css": {
-      "bytes": 1513,
+    "src/app/app.component.css": {
+      "bytes": 2585,
       "imports": []
     },
     "src/app/components/skills/skills.component.css": {
@@ -7167,6 +7179,10 @@
     },
     "src/app/components/about/about.component.css": {
       "bytes": 3172,
+      "imports": []
+    },
+    "src/app/components/contact-form/contact-form.component.css": {
+      "bytes": 1513,
       "imports": []
     },
     "node_modules/zone.js/fesm2015/zone.js": {
@@ -7364,11 +7380,14 @@
     }
   },
   "outputs": {
-    "main-RSK5YHUE.js": {
+    "main-7K25SXI6.js": {
       "imports": [],
       "exports": [],
       "entryPoint": "src/main.ts",
       "inputs": {
+        "node_modules/@vercel/analytics/dist/index.mjs": {
+          "bytesInOutput": 1579
+        },
         "node_modules/@angular/core/fesm2022/untracked-BKcld_ew.mjs": {
           "bytesInOutput": 2693
         },
@@ -7601,7 +7620,7 @@
           "bytesInOutput": 895
         },
         "src/app/features/three/background-three.service.ts": {
-          "bytesInOutput": 18853
+          "bytesInOutput": 18731
         },
         "src/app/services/three.service.ts": {
           "bytesInOutput": 1763
@@ -7646,20 +7665,10 @@
           "bytesInOutput": 5869
         },
         "src/main.ts": {
-          "bytesInOutput": 521
+          "bytesInOutput": 526
         }
       },
-      "bytes": 906941
-    },
-    "app.component-5C2GTOBL.css": {
-      "imports": [],
-      "inputs": {
-        "src/app/app.component.css": {
-          "bytesInOutput": 1421
-        }
-      },
-      "bytes": 1422,
-      "ng-component": true
+      "bytes": 908403
     },
     "navbar.component-BHJFJV3A.css": {
       "imports": [],
@@ -7671,14 +7680,14 @@
       "bytes": 12804,
       "ng-component": true
     },
-    "contact-form.component-RG4ZJYZI.css": {
+    "app.component-5C2GTOBL.css": {
       "imports": [],
       "inputs": {
-        "src/app/components/contact-form/contact-form.component.css": {
-          "bytesInOutput": 970
+        "src/app/app.component.css": {
+          "bytesInOutput": 1421
         }
       },
-      "bytes": 971,
+      "bytes": 1422,
       "ng-component": true
     },
     "skills.component-ITXAIAWY.css": {
@@ -7709,6 +7718,16 @@
         }
       },
       "bytes": 1981,
+      "ng-component": true
+    },
+    "contact-form.component-RG4ZJYZI.css": {
+      "imports": [],
+      "inputs": {
+        "src/app/components/contact-form/contact-form.component.css": {
+          "bytesInOutput": 970
+        }
+      },
+      "bytes": 971,
       "ng-component": true
     },
     "polyfills-TK6WBB5R.js": {
