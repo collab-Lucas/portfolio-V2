@@ -169,31 +169,21 @@ export class NavbarComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Ajouter l'écouteur de mouvement de la souris
     window.addEventListener('mousemove', this.handleMouseMove.bind(this));
-    
-    // S'abonner aux changements d'état de la navbar AVANT de restaurer l'état
+
+    // S'abonner aux changements d'état de la navbar
     this.subscriptions.push(
       this.navbarEffects.isShrunk$.subscribe(isShrunk => {
-        this.currentShrinkState = isShrunk; // Mettre à jour le cache
+        this.currentShrinkState = isShrunk;
         if (isShrunk && this.isLightControlsOpen) {
           this.isLightControlsOpen = false;
         }
       })
     );
-    
-    // Restaurer l'état de la navbar depuis localStorage APRÈS la souscription
-    const savedState = localStorage.getItem('navbarState');
-    if (savedState) {
-      const savedShrinkState = JSON.parse(savedState);
-      // Appliquer l'état sauvegardé au service NavbarEffects
-      setTimeout(() => {
-        this.navbarEffects.setNavbarState(savedShrinkState);
-      }, 100);
-    } else {
-      // Si aucun état sauvegardé, utiliser l'état par défaut (navbar )
-      setTimeout(() => {
-        this.navbarEffects.setNavbarState(false);
-      }, 100);
-    }
+
+    // Forcer la navbar à être grande à chaque chargement
+    setTimeout(() => {
+      this.navbarEffects.setNavbarState(false);
+    }, 100);
   }
   ngAfterViewInit() {
     setTimeout(() => {
