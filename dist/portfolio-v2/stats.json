@@ -6622,7 +6622,7 @@
       "format": "esm"
     },
     "src/app/components/navbar/navbar.component.ts": {
-      "bytes": 40048,
+      "bytes": 40361,
       "imports": [
         {
           "path": "@angular/core",
@@ -6760,7 +6760,7 @@
       "format": "esm"
     },
     "src/app/components/skills/skills.component.ts": {
-      "bytes": 4974,
+      "bytes": 5019,
       "imports": [
         {
           "path": "@angular/core",
@@ -7105,8 +7105,147 @@
       ],
       "format": "esm"
     },
+    "node_modules/@angular/router/fesm2022/router-Dwfin5Au.mjs": {
+      "bytes": 233126,
+      "imports": [
+        {
+          "path": "node_modules/@angular/common/fesm2022/common.mjs",
+          "kind": "import-statement",
+          "original": "@angular/common"
+        },
+        {
+          "path": "node_modules/@angular/core/fesm2022/core.mjs",
+          "kind": "import-statement",
+          "original": "@angular/core"
+        },
+        {
+          "path": "node_modules/@angular/core/fesm2022/core.mjs",
+          "kind": "import-statement",
+          "original": "@angular/core"
+        },
+        {
+          "path": "node_modules/rxjs/dist/esm/index.js",
+          "kind": "import-statement",
+          "original": "rxjs"
+        },
+        {
+          "path": "node_modules/rxjs/dist/esm/operators/index.js",
+          "kind": "import-statement",
+          "original": "rxjs/operators"
+        },
+        {
+          "path": "node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
+          "kind": "import-statement",
+          "original": "@angular/platform-browser"
+        },
+        {
+          "path": "<runtime>",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "node_modules/@angular/router/fesm2022/router_module-DTJgGWLd.mjs": {
+      "bytes": 59764,
+      "imports": [
+        {
+          "path": "node_modules/@angular/common/fesm2022/common.mjs",
+          "kind": "import-statement",
+          "original": "@angular/common"
+        },
+        {
+          "path": "node_modules/@angular/common/fesm2022/common.mjs",
+          "kind": "import-statement",
+          "original": "@angular/common"
+        },
+        {
+          "path": "node_modules/@angular/core/fesm2022/core.mjs",
+          "kind": "import-statement",
+          "original": "@angular/core"
+        },
+        {
+          "path": "node_modules/@angular/core/fesm2022/core.mjs",
+          "kind": "import-statement",
+          "original": "@angular/core"
+        },
+        {
+          "path": "node_modules/@angular/router/fesm2022/router-Dwfin5Au.mjs",
+          "kind": "import-statement",
+          "original": "./router-Dwfin5Au.mjs"
+        },
+        {
+          "path": "node_modules/rxjs/dist/esm/index.js",
+          "kind": "import-statement",
+          "original": "rxjs"
+        },
+        {
+          "path": "node_modules/rxjs/dist/esm/operators/index.js",
+          "kind": "import-statement",
+          "original": "rxjs/operators"
+        },
+        {
+          "path": "<runtime>",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "node_modules/@angular/router/fesm2022/router.mjs": {
+      "bytes": 3981,
+      "imports": [
+        {
+          "path": "node_modules/@angular/router/fesm2022/router-Dwfin5Au.mjs",
+          "kind": "import-statement",
+          "original": "./router-Dwfin5Au.mjs"
+        },
+        {
+          "path": "node_modules/@angular/router/fesm2022/router_module-DTJgGWLd.mjs",
+          "kind": "import-statement",
+          "original": "./router_module-DTJgGWLd.mjs"
+        },
+        {
+          "path": "node_modules/@angular/core/fesm2022/core.mjs",
+          "kind": "import-statement",
+          "original": "@angular/core"
+        },
+        {
+          "path": "node_modules/@angular/common/fesm2022/common.mjs",
+          "kind": "import-statement",
+          "original": "@angular/common"
+        },
+        {
+          "path": "node_modules/rxjs/dist/esm/index.js",
+          "kind": "import-statement",
+          "original": "rxjs"
+        },
+        {
+          "path": "node_modules/rxjs/dist/esm/operators/index.js",
+          "kind": "import-statement",
+          "original": "rxjs/operators"
+        },
+        {
+          "path": "node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
+          "kind": "import-statement",
+          "original": "@angular/platform-browser"
+        }
+      ],
+      "format": "esm"
+    },
+    "src/app/app.routes.ts": {
+      "bytes": 168,
+      "imports": [
+        {
+          "path": "@angular/router",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
     "src/main.ts": {
-      "bytes": 2001,
+      "bytes": 1998,
       "imports": [
         {
           "path": "node_modules/@vercel/analytics/dist/index.mjs",
@@ -7154,12 +7293,33 @@
           "original": "@angular/forms"
         },
         {
-          "path": "@angular/router",
+          "path": "node_modules/@angular/router/fesm2022/router.mjs",
           "kind": "import-statement",
-          "external": true
+          "original": "@angular/router"
+        },
+        {
+          "path": "src/app/app.routes.ts",
+          "kind": "import-statement",
+          "original": "./app/app.routes"
         }
       ],
       "format": "esm"
+    },
+    "src/app/components/skills/skills.component.css": {
+      "bytes": 864,
+      "imports": []
+    },
+    "src/app/components/background/background.component.css": {
+      "bytes": 117,
+      "imports": []
+    },
+    "src/app/app.component.css": {
+      "bytes": 2585,
+      "imports": []
+    },
+    "src/app/components/about/about.component.css": {
+      "bytes": 3172,
+      "imports": []
     },
     "src/app/components/contact-form/contact-form.component.css": {
       "bytes": 1513,
@@ -7167,22 +7327,6 @@
     },
     "src/app/components/navbar/navbar.component.css": {
       "bytes": 12809,
-      "imports": []
-    },
-    "src/app/app.component.css": {
-      "bytes": 2585,
-      "imports": []
-    },
-    "src/app/components/skills/skills.component.css": {
-      "bytes": 833,
-      "imports": []
-    },
-    "src/app/components/about/about.component.css": {
-      "bytes": 3172,
-      "imports": []
-    },
-    "src/app/components/background/background.component.css": {
-      "bytes": 117,
       "imports": []
     },
     "node_modules/zone.js/fesm2015/zone.js": {
@@ -7326,19 +7470,9 @@
         }
       ]
     },
-    "src/assets/css/animations.css": {
-      "bytes": 0,
-      "imports": []
-    },
     "src/styles.css": {
-      "bytes": 1253,
-      "imports": [
-        {
-          "path": "src/assets/css/animations.css",
-          "kind": "import-rule",
-          "original": "./assets/css/animations.css"
-        }
-      ]
+      "bytes": 1210,
+      "imports": []
     },
     "src/styles/layout-shift-prevention.css": {
       "bytes": 5758,
@@ -7380,7 +7514,7 @@
     }
   },
   "outputs": {
-    "main-6R2YNRMJ.js": {
+    "main-RSTLIZN7.js": {
       "imports": [],
       "exports": [],
       "entryPoint": "src/main.ts",
@@ -7389,7 +7523,7 @@
           "bytesInOutput": 1579
         },
         "node_modules/@angular/core/fesm2022/untracked-BKcld_ew.mjs": {
-          "bytesInOutput": 2693
+          "bytesInOutput": 3854
         },
         "node_modules/@angular/core/fesm2022/primitives/di.mjs": {
           "bytesInOutput": 95
@@ -7440,7 +7574,7 @@
           "bytesInOutput": 24
         },
         "node_modules/rxjs/dist/esm/internal/util/pipe.js": {
-          "bytesInOutput": 100
+          "bytesInOutput": 131
         },
         "node_modules/rxjs/dist/esm/internal/Observable.js": {
           "bytesInOutput": 946
@@ -7451,14 +7585,20 @@
         "node_modules/rxjs/dist/esm/internal/operators/OperatorSubscriber.js": {
           "bytesInOutput": 590
         },
+        "node_modules/rxjs/dist/esm/internal/operators/refCount.js": {
+          "bytesInOutput": 272
+        },
+        "node_modules/rxjs/dist/esm/internal/observable/ConnectableObservable.js": {
+          "bytesInOutput": 753
+        },
+        "node_modules/rxjs/dist/esm/index.js": {
+          "bytesInOutput": 0
+        },
         "node_modules/rxjs/dist/esm/internal/util/ObjectUnsubscribedError.js": {
           "bytesInOutput": 105
         },
         "node_modules/rxjs/dist/esm/internal/Subject.js": {
           "bytesInOutput": 1979
-        },
-        "node_modules/rxjs/dist/esm/index.js": {
-          "bytesInOutput": 0
         },
         "node_modules/rxjs/dist/esm/internal/BehaviorSubject.js": {
           "bytesInOutput": 310
@@ -7484,8 +7624,14 @@
         "node_modules/rxjs/dist/esm/internal/scheduler/async.js": {
           "bytesInOutput": 24
         },
+        "node_modules/rxjs/dist/esm/internal/observable/empty.js": {
+          "bytesInOutput": 31
+        },
         "node_modules/rxjs/dist/esm/internal/util/isScheduler.js": {
           "bytesInOutput": 40
+        },
+        "node_modules/rxjs/dist/esm/internal/util/args.js": {
+          "bytesInOutput": 130
         },
         "node_modules/tslib/tslib.es6.mjs": {
           "bytesInOutput": 1905
@@ -7520,6 +7666,48 @@
         "node_modules/rxjs/dist/esm/internal/util/executeSchedule.js": {
           "bytesInOutput": 138
         },
+        "node_modules/rxjs/dist/esm/internal/operators/observeOn.js": {
+          "bytesInOutput": 144
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/subscribeOn.js": {
+          "bytesInOutput": 79
+        },
+        "node_modules/rxjs/dist/esm/internal/scheduled/scheduleObservable.js": {
+          "bytesInOutput": 48
+        },
+        "node_modules/rxjs/dist/esm/internal/scheduled/schedulePromise.js": {
+          "bytesInOutput": 48
+        },
+        "node_modules/rxjs/dist/esm/internal/scheduled/scheduleArray.js": {
+          "bytesInOutput": 145
+        },
+        "node_modules/rxjs/dist/esm/internal/scheduled/scheduleIterable.js": {
+          "bytesInOutput": 229
+        },
+        "node_modules/rxjs/dist/esm/internal/scheduled/scheduleAsyncIterable.js": {
+          "bytesInOutput": 207
+        },
+        "node_modules/rxjs/dist/esm/internal/scheduled/scheduleReadableStreamLike.js": {
+          "bytesInOutput": 36
+        },
+        "node_modules/rxjs/dist/esm/internal/scheduled/scheduled.js": {
+          "bytesInOutput": 185
+        },
+        "node_modules/rxjs/dist/esm/internal/observable/from.js": {
+          "bytesInOutput": 40
+        },
+        "node_modules/rxjs/dist/esm/internal/observable/of.js": {
+          "bytesInOutput": 45
+        },
+        "node_modules/rxjs/dist/esm/internal/observable/throwError.js": {
+          "bytesInOutput": 95
+        },
+        "node_modules/rxjs/dist/esm/internal/util/isObservable.js": {
+          "bytesInOutput": 73
+        },
+        "node_modules/rxjs/dist/esm/internal/util/EmptyError.js": {
+          "bytesInOutput": 96
+        },
         "node_modules/rxjs/dist/esm/internal/util/isDate.js": {
           "bytesInOutput": 51
         },
@@ -7529,17 +7717,86 @@
         "node_modules/rxjs/dist/esm/internal/util/mapOneOrManyArgs.js": {
           "bytesInOutput": 102
         },
+        "node_modules/rxjs/dist/esm/internal/util/argsArgArrayOrObject.js": {
+          "bytesInOutput": 286
+        },
+        "node_modules/rxjs/dist/esm/internal/util/createObject.js": {
+          "bytesInOutput": 60
+        },
+        "node_modules/rxjs/dist/esm/internal/observable/combineLatest.js": {
+          "bytesInOutput": 426
+        },
         "node_modules/rxjs/dist/esm/internal/operators/mergeInternals.js": {
           "bytesInOutput": 397
         },
         "node_modules/rxjs/dist/esm/internal/operators/mergeMap.js": {
           "bytesInOutput": 134
         },
+        "node_modules/rxjs/dist/esm/internal/operators/mergeAll.js": {
+          "bytesInOutput": 35
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/concatAll.js": {
+          "bytesInOutput": 27
+        },
+        "node_modules/rxjs/dist/esm/internal/observable/concat.js": {
+          "bytesInOutput": 43
+        },
+        "node_modules/rxjs/dist/esm/internal/observable/defer.js": {
+          "bytesInOutput": 56
+        },
         "node_modules/rxjs/dist/esm/internal/observable/fromEvent.js": {
           "bytesInOutput": 658
         },
         "node_modules/rxjs/dist/esm/internal/observable/timer.js": {
           "bytesInOutput": 221
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/filter.js": {
+          "bytesInOutput": 94
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/catchError.js": {
+          "bytesInOutput": 203
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/scanInternals.js": {
+          "bytesInOutput": 160
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/concatMap.js": {
+          "bytesInOutput": 48
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/defaultIfEmpty.js": {
+          "bytesInOutput": 115
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/take.js": {
+          "bytesInOutput": 118
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/throwIfEmpty.js": {
+          "bytesInOutput": 146
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/finalize.js": {
+          "bytesInOutput": 72
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/first.js": {
+          "bytesInOutput": 115
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/takeLast.js": {
+          "bytesInOutput": 176
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/last.js": {
+          "bytesInOutput": 115
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/scan.js": {
+          "bytesInOutput": 59
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/startWith.js": {
+          "bytesInOutput": 85
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/switchMap.js": {
+          "bytesInOutput": 236
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/takeUntil.js": {
+          "bytesInOutput": 104
+        },
+        "node_modules/rxjs/dist/esm/internal/operators/tap.js": {
+          "bytesInOutput": 494
         },
         "node_modules/rxjs/dist/esm/internal/operators/throttle.js": {
           "bytesInOutput": 403
@@ -7551,13 +7808,13 @@
           "bytesInOutput": 0
         },
         "node_modules/@angular/core/fesm2022/core.mjs": {
-          "bytesInOutput": 109976
+          "bytesInOutput": 112899
         },
         "node_modules/@angular/common/fesm2022/dom_tokens-rA0ACyx7.mjs": {
           "bytesInOutput": 18
         },
         "node_modules/@angular/common/fesm2022/location-Dq4mJT-A.mjs": {
-          "bytesInOutput": 83
+          "bytesInOutput": 5782
         },
         "node_modules/@angular/common/fesm2022/common_module-Dx7dWex5.mjs": {
           "bytesInOutput": 3360
@@ -7575,7 +7832,7 @@
           "bytesInOutput": 4655
         },
         "node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs": {
-          "bytesInOutput": 0
+          "bytesInOutput": 285
         },
         "node_modules/@angular/forms/fesm2022/forms.mjs": {
           "bytesInOutput": 809
@@ -7632,7 +7889,7 @@
           "bytesInOutput": 518
         },
         "src/app/components/navbar/navbar.component.ts": {
-          "bytesInOutput": 25526
+          "bytesInOutput": 25648
         },
         "src/app/components/background/background.component.ts": {
           "bytesInOutput": 892
@@ -7641,7 +7898,7 @@
           "bytesInOutput": 3802
         },
         "src/app/components/skills/skills.component.ts": {
-          "bytesInOutput": 2505
+          "bytesInOutput": 2548
         },
         "src/app/components/contact-form/contact-form.component.ts": {
           "bytesInOutput": 2288
@@ -7664,11 +7921,63 @@
         "node_modules/ngx-bootstrap/buttons/fesm2022/ngx-bootstrap-buttons.mjs": {
           "bytesInOutput": 5869
         },
+        "node_modules/@angular/router/fesm2022/router-Dwfin5Au.mjs": {
+          "bytesInOutput": 68979
+        },
+        "node_modules/@angular/router/fesm2022/router_module-DTJgGWLd.mjs": {
+          "bytesInOutput": 693
+        },
+        "node_modules/@angular/router/fesm2022/router.mjs": {
+          "bytesInOutput": 0
+        },
+        "src/app/app.routes.ts": {
+          "bytesInOutput": 55
+        },
         "src/main.ts": {
-          "bytesInOutput": 526
+          "bytesInOutput": 533
         }
       },
-      "bytes": 908271
+      "bytes": 994198
+    },
+    "skills.component-7MLAIPWK.css": {
+      "imports": [],
+      "inputs": {
+        "src/app/components/skills/skills.component.css": {
+          "bytesInOutput": 571
+        }
+      },
+      "bytes": 572,
+      "ng-component": true
+    },
+    "background.component-ZL2P7B5Y.css": {
+      "imports": [],
+      "inputs": {
+        "src/app/components/background/background.component.css": {
+          "bytesInOutput": 81
+        }
+      },
+      "bytes": 82,
+      "ng-component": true
+    },
+    "app.component-5C2GTOBL.css": {
+      "imports": [],
+      "inputs": {
+        "src/app/app.component.css": {
+          "bytesInOutput": 1421
+        }
+      },
+      "bytes": 1422,
+      "ng-component": true
+    },
+    "about.component-FFTTYIO5.css": {
+      "imports": [],
+      "inputs": {
+        "src/app/components/about/about.component.css": {
+          "bytesInOutput": 1980
+        }
+      },
+      "bytes": 1981,
+      "ng-component": true
     },
     "contact-form.component-RG4ZJYZI.css": {
       "imports": [],
@@ -7688,46 +7997,6 @@
         }
       },
       "bytes": 12804,
-      "ng-component": true
-    },
-    "app.component-5C2GTOBL.css": {
-      "imports": [],
-      "inputs": {
-        "src/app/app.component.css": {
-          "bytesInOutput": 1421
-        }
-      },
-      "bytes": 1422,
-      "ng-component": true
-    },
-    "skills.component-ITXAIAWY.css": {
-      "imports": [],
-      "inputs": {
-        "src/app/components/skills/skills.component.css": {
-          "bytesInOutput": 547
-        }
-      },
-      "bytes": 548,
-      "ng-component": true
-    },
-    "about.component-AL4FC4VB.css": {
-      "imports": [],
-      "inputs": {
-        "src/app/components/about/about.component.css": {
-          "bytesInOutput": 1980
-        }
-      },
-      "bytes": 1981,
-      "ng-component": true
-    },
-    "background.component-ZL2P7B5Y.css": {
-      "imports": [],
-      "inputs": {
-        "src/app/components/background/background.component.css": {
-          "bytesInOutput": 81
-        }
-      },
-      "bytes": 82,
       "ng-component": true
     },
     "polyfills-TK6WBB5R.js": {
@@ -7866,9 +8135,6 @@
       "inputs": {
         "node_modules/bootstrap/dist/css/bootstrap.min.css": {
           "bytesInOutput": 229857
-        },
-        "src/assets/css/animations.css": {
-          "bytesInOutput": 0
         },
         "src/styles.css": {
           "bytesInOutput": 1205
