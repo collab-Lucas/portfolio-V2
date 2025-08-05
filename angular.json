@@ -64,7 +64,7 @@
               "extractLicenses": true,
               "serviceWorker": false,
               "crossOrigin": "anonymous",
-              "subresourceIntegrity": true,
+              "subresourceIntegrity": false,
               "index": {
                 "input": "src/index.html",
                 "output": "index.html"
