@@ -7305,16 +7305,12 @@
       ],
       "format": "esm"
     },
-    "src/app/app.component.css": {
-      "bytes": 2585,
-      "imports": []
-    },
     "src/app/components/navbar/navbar.component.css": {
       "bytes": 12809,
       "imports": []
     },
-    "src/app/components/about/about.component.css": {
-      "bytes": 3172,
+    "src/app/app.component.css": {
+      "bytes": 2585,
       "imports": []
     },
     "src/app/components/skills/skills.component.css": {
@@ -7327,6 +7323,10 @@
     },
     "src/app/components/contact-form/contact-form.component.css": {
       "bytes": 1513,
+      "imports": []
+    },
+    "src/app/components/about/about.component.css": {
+      "bytes": 3172,
       "imports": []
     },
     "node_modules/zone.js/fesm2015/zone.js": {
@@ -7939,16 +7939,6 @@
       },
       "bytes": 994198
     },
-    "app.component-5C2GTOBL.css": {
-      "imports": [],
-      "inputs": {
-        "src/app/app.component.css": {
-          "bytesInOutput": 1421
-        }
-      },
-      "bytes": 1422,
-      "ng-component": true
-    },
     "navbar.component-BHJFJV3A.css": {
       "imports": [],
       "inputs": {
@@ -7959,14 +7949,14 @@
       "bytes": 12804,
       "ng-component": true
     },
-    "about.component-FFTTYIO5.css": {
+    "app.component-5C2GTOBL.css": {
       "imports": [],
       "inputs": {
-        "src/app/components/about/about.component.css": {
-          "bytesInOutput": 1980
+        "src/app/app.component.css": {
+          "bytesInOutput": 1421
         }
       },
-      "bytes": 1981,
+      "bytes": 1422,
       "ng-component": true
     },
     "skills.component-7MLAIPWK.css": {
@@ -7997,6 +7987,16 @@
         }
       },
       "bytes": 971,
+      "ng-component": true
+    },
+    "about.component-FFTTYIO5.css": {
+      "imports": [],
+      "inputs": {
+        "src/app/components/about/about.component.css": {
+          "bytesInOutput": 1980
+        }
+      },
+      "bytes": 1981,
       "ng-component": true
     },
     "polyfills-TK6WBB5R.js": {

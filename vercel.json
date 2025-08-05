@@ -1,21 +1,12 @@
 {
   "version": 2,
-  "builds": [
+  "outputDirectory": "dist/portfolio-v2/browser",
+  "rewrites": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/portfolio-v2/browser"
-      }
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ],
-  "buildCommand": "npm run build:vercel",
   "headers": [
     {
       "source": "/(.*)",
