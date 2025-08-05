@@ -266,10 +266,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
   private navigateToSection(targetId: string) {
     const element = document.getElementById(targetId);
     if (element) {
-      element.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
+      if (targetId === 'skills') {
+        const y = element.getBoundingClientRect().top + window.scrollY - 150;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      } else {
+        // Scroll normal pour les autres sections
+        element.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
     }
   }
   downloadCV(event?: Event) {

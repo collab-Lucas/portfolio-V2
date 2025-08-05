@@ -21,7 +21,8 @@ const criticalResources = [
   '/assets/css/animations.css'
 ];
 
-// Définir tes routes si tu en utilises (à modifier selon ton application)
+
+import { routes } from './app/app.routes';
 
 // Optimized bootstrap with performance monitoring
 Promise.all([
@@ -39,6 +40,7 @@ Promise.all([
         ButtonsModule.forRoot(),
         FormsModule
       ),
+      provideRouter(routes)
     ]
   })
 ]).then((results) => {
