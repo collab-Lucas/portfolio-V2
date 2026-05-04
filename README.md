@@ -2,7 +2,7 @@
 
 ## 📋 Description
 
-Projet test de portfolio développé avec Angular et Three.js, visant à expérimenter l’intégration de scènes 3D avec Bootstrap. Déployé sur Vercel, ce projet sert principalement de terrain d’expérimentation pour les performances et l’interactivité frontend.
+Projet test de portfolio développé avec Angular et Three.js, visant à expérimenter l’intégration de scènes 3D avec Bootstrap. Déployé sur Vercel, ce projet sert aussi de terrain d’expérimentation pour tester Copilot et comparer différentes IA — ce qui a finalement eu tendance à complexifier le projet plus qu’à le simplifier.
 
 ## 🚀 Technologies Utilisées
 
