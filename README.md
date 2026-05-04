@@ -2,7 +2,7 @@
 
 ## 📋 Description
 
-Portfolio personnel développé avec Angular 19 et Three.js, présentant mes compétences en développement web frontend avec des animations 3D interactives. Cette version optimisée met l'accent sur les performances et l'expérience utilisateur.
+Projet test de portfolio développé avec Angular et Three.js, visant à expérimenter l’intégration de scènes 3D avec Bootstrap. Déployé sur Vercel, ce projet sert principalement de terrain d’expérimentation pour les performances et l’interactivité frontend.
 
 ## 🚀 Technologies Utilisées
 
